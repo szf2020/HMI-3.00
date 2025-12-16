@@ -27,9 +27,6 @@ def get_tree_widget_stylesheet() -> str:
             background-color: {c.COLOR_SELECTED_ALT};
             color: {c.TEXT_PRIMARY};
         }}
-        QTreeWidget::item:hover {{
-            background-color: {c.COLOR_HOVER};
-        }}
     """
 
 
@@ -59,10 +56,6 @@ def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: 
             border-left: 2px solid {c.ACCENT_GREEN};
             margin-left: 0px;
             color: {c.TEXT_PRIMARY};
-        }}
-        QTreeWidget::item:hover {{
-            background-color: {c.COLOR_HOVER};
-            border-left: 2px solid {c.ACCENT_GREEN};
         }}
         QTreeWidget::item:selected {{
             background-color: {c.COLOR_SELECTED_ALT};
@@ -96,6 +89,63 @@ def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: 
             color: {c.TEXT_PRIMARY};
             padding: 3px;
             border: 1px solid {c.BORDER_HEADER};
+        }}
+    """
+
+
+def get_layers_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "") -> str:
+    """
+    Generate stylesheet for layers tree widget with enhanced spacing and icon sizing.
+    
+    Args:
+        expand_icon_path: Path to expand icon
+        collapse_icon_path: Path to collapse icon
+        
+    Returns:
+        QSS stylesheet string for layers tree widget
+    """
+    return f"""
+        QTreeWidget {{
+            border: none;
+            background-color: {c.BG_DARK_SECONDARY};
+            alternate-background-color: {c.BG_DARK_SECONDARY};
+            color: {c.TEXT_PRIMARY};
+            gridline-color: {c.BG_DARK_SECONDARY};
+            outline: none;
+            margin-left: 0px;
+        }}
+        QTreeWidget::item {{
+            padding: 4px 2px;
+            border-left: 2px solid {c.ACCENT_GREEN};
+            margin-left: 0px;
+            color: {c.TEXT_PRIMARY};
+        }}
+        QTreeWidget::item:selected {{
+            background-color: {c.COLOR_SELECTED_ALT};
+            border-left: 2px solid {c.ACCENT_GREEN};
+            color: {c.TEXT_PRIMARY};
+        }}
+        QTreeWidget::branch:has-children:closed {{
+            image: url("{expand_icon_path}");
+            background-color: transparent;
+            width: 24px;
+            height: 24px;
+        }}
+        QTreeWidget::branch:has-children:open {{
+            image: url("{collapse_icon_path}");
+            background-color: transparent;
+            width: 24px;
+            height: 24px;
+        }}
+        QTreeWidget::branch:has-siblings {{
+            border-image: none;
+        }}
+        QTreeWidget::branch {{
+            background-color: transparent;
+            margin-right: 6px;
+            margin-left: 4px;
+            margin-top: 6px;
+            margin-bottom: 6px;
         }}
     """
 
@@ -186,9 +236,6 @@ def get_completer_popup_stylesheet() -> str:
         }}
         QListWidget::item {{
             color: {c.TEXT_PRIMARY};
-        }}
-        QListWidget::item:hover {{
-            background-color: {c.BG_DARK_QUATERNARY};
         }}
         QListWidget::item:selected {{
             background-color: {c.COLOR_SELECTED_ALT};
@@ -315,6 +362,7 @@ def get_normal_text_stylesheet() -> str:
 STYLESHEETS = {
     "tree_widget": get_tree_widget_stylesheet,
     "project_tree": get_project_tree_stylesheet,
+    "layers_tree": get_layers_tree_stylesheet,
     "status_bar": get_status_bar_stylesheet,
     "tool_button": get_tool_button_stylesheet,
     "formula_hint": get_formula_hint_stylesheet,

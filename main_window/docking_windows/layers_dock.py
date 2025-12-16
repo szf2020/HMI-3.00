@@ -22,11 +22,12 @@ from PySide6.QtCore import (
     Qt, Signal, QTimer, QMimeData, QByteArray, QDataStream, QIODevice, QSize, QRect
 )
 from PySide6.QtGui import (
-    QIcon, QPixmap, QDrag, QPalette, QColor, QFont, QKeySequence
+    QIcon, QPixmap, QDrag, QPalette, QColor, QFont, QKeySequence, QCursor
 )
 from PySide6.QtSvg import QSvgRenderer
 from pathlib import Path
 from ..services.icon_service import IconService
+from ..widgets.tree import CustomTreeWidget
 from styles import stylesheets
 import uuid
 import json
@@ -84,7 +85,7 @@ class LayerItem:
         return item
 
 
-class LayerTreeWidget(QTreeWidget):
+class LayerTreeWidget(CustomTreeWidget):
     """Custom tree widget for layers with drag-drop support."""
     
     layers_changed = Signal()
@@ -95,15 +96,16 @@ class LayerTreeWidget(QTreeWidget):
     layer_renamed = Signal(str, str)  # layer_id, new_name
     layer_deleted = Signal(str)  # layer_id
     layers_reordered = Signal()
+    layer_moved_to_group = Signal(str, str)  # layer_id, group_id
+    layer_moved_out_group = Signal(str)  # layer_id
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setIndentation(12)
-        self.setColumnCount(4)
-        self.setHeaderLabels(['Layer', 'Vis', 'Lock', 'Opacity'])
+        self.setIndentation(24)  # Increased from 12 for better spacing
+        self.setColumnCount(3)
+        self.setHeaderLabels(['Layer', 'Vis', 'Lock'])
         
         # Hide header
         self.header().hide()
@@ -112,18 +114,31 @@ class LayerTreeWidget(QTreeWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         
         self.setUniformRowHeights(True)
         self._user_selection_active = False
-        icon_dir = Path(__file__).parent.parent / "resources" / "icons"
-        expand_icon_path = str(icon_dir / "icon-park-solid-add.svg").replace("\\", "/")
-        collapse_icon_path = str(icon_dir / "icon-park-solid-subtract.svg").replace("\\", "/")
-        self._apply_layers_tree_stylesheet(expand_icon_path, collapse_icon_path)
+        self._dragged_layer = None  # Track dragged layer for custom drop handling
+        
+        # Apply enhanced stylesheet for layers tree
+        self._apply_layers_stylesheet()
         
         self.itemSelectionChanged.connect(self._on_item_selection_changed)
         self.itemChanged.connect(self._on_item_changed)
+    
+    def _apply_layers_stylesheet(self):
+        """Apply enhanced stylesheet for layers tree with larger icons and spacing."""
+        from styles import stylesheets
+        from pathlib import Path
         
+        # Get icon paths
+        icon_path = Path(__file__).parent.parent / 'resources' / 'icons'
+        expand_icon = str(icon_path / 'icon-park-solid-add.svg').replace('\\', '/')
+        collapse_icon = str(icon_path / 'icon-park-solid-subtract.svg').replace('\\', '/')
+        
+        # Get stylesheet from centralized styles module
+        stylesheet = stylesheets.get_layers_tree_stylesheet(expand_icon, collapse_icon)
+        self.setStyleSheet(stylesheet)
+    
     def _on_item_selection_changed(self):
         """Emit signal when layer is selected."""
         if not self._consume_user_selection():
@@ -144,9 +159,110 @@ class LayerTreeWidget(QTreeWidget):
                 self.layer_renamed.emit(layer_item.layer_id, new_name)
     
     def dropEvent(self, event):
-        """Handle drop event for reordering."""
-        super().dropEvent(event)
+        """Handle drop event for reordering layers."""
+        # Get the dragged items
+        dragged_items = self.selectedItems()
+        if not dragged_items:
+            super().dropEvent(event)
+            return
+        
+        dragged_layer = self._layer_from_tree_item(dragged_items[0])
+        if not dragged_layer:
+            super().dropEvent(event)
+            return
+        
+        # Get drop target item
+        drop_item = self.itemAt(event.pos())
+        drop_handled = False
+        
+        if drop_item:
+            drop_layer = self._layer_from_tree_item(drop_item)
+            
+            # Case 1: Dropping on a group - move layer into group
+            if drop_layer and drop_layer.is_group and dragged_layer != drop_layer:
+                self._move_layer_to_group(dragged_layer, drop_layer)
+                drop_handled = True
+            
+            # Case 2: Dropping on a regular layer - reorder within same parent
+            elif drop_layer and drop_layer.parent and dragged_layer != drop_layer:
+                # Check if we're moving a layer out of a group
+                if dragged_layer.parent != drop_layer.parent:
+                    # Check if drop target is child of dragged layer (moving out)
+                    if self._is_ancestor(dragged_layer, drop_layer):
+                        # Moving out of group
+                        self._move_layer_out_of_group(dragged_layer, drop_layer.parent)
+                    else:
+                        # Regular reorder
+                        self._reorder_layer_in_parent(dragged_layer, drop_layer)
+                else:
+                    # Same parent, just reorder
+                    self._reorder_layer_in_parent(dragged_layer, drop_layer)
+                
+                drop_handled = True
+        
+        if drop_handled:
+            # Rebuild tree to reflect changes
+            if hasattr(self, 'layers_dock') and self.layers_dock:
+                self.layers_dock._rebuild_tree()
+            event.accept()
+        else:
+            # Default behavior for root level
+            super().dropEvent(event)
+        
         self.layers_reordered.emit()
+    
+    def _is_ancestor(self, potential_ancestor, item):
+        """Check if potential_ancestor is an ancestor of item."""
+        current = item.parent
+        while current:
+            if current == potential_ancestor:
+                return True
+            current = current.parent
+        return False
+        
+    def _move_layer_to_group(self, layer, group):
+        """Move a layer into a group."""
+        if layer.parent:
+            layer.parent.remove_child(layer)
+        group.add_child(layer)
+        self.layer_moved_to_group.emit(layer.layer_id, group.layer_id)
+    
+    def _move_layer_out_of_group(self, layer, target_parent):
+        """Move a layer out of its group to a target parent."""
+        old_parent = layer.parent
+        
+        if old_parent:
+            old_parent.remove_child(layer)
+        
+        # Add to target parent
+        if target_parent:
+            target_parent.add_child(layer)
+        
+        self.layer_moved_out_group.emit(layer.layer_id)
+        
+        # Check if old parent group is now empty and remove it if so
+        if old_parent and old_parent.is_group and len(old_parent.children) == 0:
+            grandparent = old_parent.parent or self.root_layer
+            if old_parent in grandparent.children:
+                grandparent.remove_child(old_parent)
+            
+            if old_parent.layer_id in self.layer_map:
+                del self.layer_map[old_parent.layer_id]
+    
+    def _reorder_layer_in_parent(self, layer, target_layer):
+        """Reorder a layer within the same parent."""
+        parent = target_layer.parent or layer.parent
+        if not parent:
+            return
+        
+        # Remove from current position
+        if layer.parent:
+            layer.parent.remove_child(layer)
+        
+        # Find target position in parent's children
+        target_index = parent.children.index(target_layer)
+        parent.children.insert(target_index, layer)
+        layer.parent = parent
         
     def dragEnterEvent(self, event):
         """Handle drag enter event."""
@@ -156,16 +272,18 @@ class LayerTreeWidget(QTreeWidget):
             super().dragEnterEvent(event)
             
     def dragMoveEvent(self, event):
-        """Handle drag move event."""
+        """Handle drag move event - show drop indicators."""
         if event.mimeData().hasFormat("application/x-layer"):
+            item = self.itemAt(event.pos())
+            if item:
+                drop_layer = self._layer_from_tree_item(item)
+                # Highlight group targets in different color
+                if drop_layer and drop_layer.is_group:
+                    event.acceptProposedAction()
+                    return
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
-
-    def _apply_layers_tree_stylesheet(self, expand_icon_path: str, collapse_icon_path: str):
-        """Apply the shared project tree stylesheet with the matching icons."""
-        stylesheet = stylesheets.get_project_tree_stylesheet(expand_icon_path, collapse_icon_path)
-        self.setStyleSheet(stylesheet)
 
     def _layer_from_tree_item(self, tree_item) -> LayerItem | None:
         """Return the layer object mapped to a tree item (if available)."""
@@ -203,6 +321,11 @@ class LayerTreeWidget(QTreeWidget):
             return False
         self._user_selection_active = False
         return True
+    
+    def _rebuild_tree_from_root(self):
+        """Rebuild tree widget from layer_map - called after drop operations."""
+        # This method will be called by LayersDock after tree modifications
+        pass
 
 
 class LayersDock(QDockWidget):
@@ -263,6 +386,7 @@ class LayersDock(QDockWidget):
         # Layers tree widget
         self.tree_widget = LayerTreeWidget()
         self.tree_widget.layer_map = self.layer_map
+        self.tree_widget.layers_dock = self  # Reference back to LayersDock for callbacks
         main_layout.addWidget(self.tree_widget)
         
         self.setWidget(main_widget)
@@ -354,8 +478,6 @@ class LayersDock(QDockWidget):
         # Set icons
         if layer_item.is_group:
             tree_item.setIcon(0, IconService.get_icon("folder") or self._create_default_icon("📁"))
-        else:
-            tree_item.setIcon(0, self._create_layer_icon(layer_item))
         
         # Add visibility toggle
         vis_widget = self._create_visibility_widget(layer_item)
@@ -364,11 +486,6 @@ class LayersDock(QDockWidget):
         # Add lock toggle
         lock_widget = self._create_lock_widget(layer_item)
         self.tree_widget.setItemWidget(tree_item, 2, lock_widget)
-        
-        # Add opacity display
-        opacity_label = QLabel(f"{layer_item.opacity}%")
-        opacity_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.tree_widget.setItemWidget(tree_item, 3, opacity_label)
         
         # Add children
         for child in layer_item.children:
@@ -412,11 +529,34 @@ class LayersDock(QDockWidget):
             layer_item.visible = not layer_item.visible
             self._update_visibility_button(btn, layer_item.visible)
             self.tree_widget.layer_visibility_changed.emit(layer_item.layer_id, layer_item.visible)
+            
+            # If this is a group, cascade visibility to all children
+            if layer_item.is_group:
+                self._set_group_visibility_cascade(layer_item, layer_item.visible)
+            
             if layer_item.graphics_item:
                 layer_item.graphics_item.show() if layer_item.visible else layer_item.graphics_item.hide()
         
         btn.clicked.connect(toggle)
         return btn
+    
+    def _set_group_visibility_cascade(self, group_item, visible):
+        """Recursively set visibility for all children in a group."""
+        for child in group_item.children:
+            child.visible = visible
+            # Update UI for child
+            tree_item = self._find_tree_item_for_layer(child)
+            if tree_item:
+                vis_widget = self.tree_widget.itemWidget(tree_item, 1)
+                if vis_widget:
+                    self._update_visibility_button(vis_widget, visible)
+            
+            if child.graphics_item:
+                child.graphics_item.show() if visible else child.graphics_item.hide()
+            
+            # Recursively apply to nested groups
+            if child.is_group:
+                self._set_group_visibility_cascade(child, visible)
     
     def _update_visibility_button(self, btn, visible):
         """Update visibility button appearance."""
@@ -441,12 +581,37 @@ class LayersDock(QDockWidget):
             layer_item.locked = not layer_item.locked
             self._update_lock_button(btn, layer_item.locked)
             self.tree_widget.layer_locked_changed.emit(layer_item.layer_id, layer_item.locked)
+            
+            # If this is a group, cascade lock to all children
+            if layer_item.is_group:
+                self._set_group_lock_cascade(layer_item, layer_item.locked)
+            
             if layer_item.graphics_item:
                 layer_item.graphics_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, not layer_item.locked)
                 layer_item.graphics_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, not layer_item.locked)
         
         btn.clicked.connect(toggle)
         return btn
+    
+    def _set_group_lock_cascade(self, group_item, locked):
+        """Recursively set lock state for all children in a group."""
+        for child in group_item.children:
+            child.locked = locked
+            # Update UI for child
+            tree_item = self._find_tree_item_for_layer(child)
+            if tree_item:
+                lock_widget = self.tree_widget.itemWidget(tree_item, 2)
+                if lock_widget:
+                    self._update_lock_button(lock_widget, locked)
+            
+            if child.graphics_item:
+                from PySide6.QtWidgets import QGraphicsItem
+                child.graphics_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, not locked)
+                child.graphics_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, not locked)
+            
+            # Recursively apply to nested groups
+            if child.is_group:
+                self._set_group_lock_cascade(child, locked)
     
     def _update_lock_button(self, btn, locked):
         """Update lock button appearance."""
@@ -456,21 +621,6 @@ class LayersDock(QDockWidget):
         else:
             btn.setText("🔓")
             btn.setToolTip("Lock layer")
-    
-    def _create_layer_icon(self, layer_item):
-        """Create icon for layer type."""
-        try:
-            if layer_item.graphics_item:
-                class_name = type(layer_item.graphics_item).__name__
-                if 'rect' in class_name.lower():
-                    return IconService.get_icon("rectangle") or self._create_default_icon("▭")
-                elif 'ellipse' in class_name.lower():
-                    return IconService.get_icon("ellipse") or self._create_default_icon("●")
-                elif 'text' in class_name.lower():
-                    return IconService.get_icon("text") or self._create_default_icon("T")
-        except:
-            pass
-        return self._create_default_icon("◉")
     
     def _create_default_icon(self, text):
         """Create a simple text-based icon."""
@@ -558,11 +708,20 @@ class LayersDock(QDockWidget):
             if layer_item.layer_id in self.layer_map:
                 del self.layer_map[layer_item.layer_id]
             
-            if layer_item.graphics_item and id(layer_item.graphics_item) in self.graphics_items_map:
-                del self.graphics_items_map[id(layer_item.graphics_item)]
-                scene = layer_item.graphics_item.scene()
-                if scene:
-                    scene.removeItem(layer_item.graphics_item)
+            # Safely remove graphics item from scene
+            if layer_item.graphics_item:
+                try:
+                    scene = layer_item.graphics_item.scene()
+                    if scene:
+                        # Check if item actually belongs to this scene
+                        if layer_item.graphics_item in scene.items():
+                            scene.removeItem(layer_item.graphics_item)
+                except (RuntimeError, AttributeError):
+                    # Item may have already been deleted or scene is invalid
+                    pass
+                
+                if id(layer_item.graphics_item) in self.graphics_items_map:
+                    del self.graphics_items_map[id(layer_item.graphics_item)]
             
             parent = tree_item.parent()
             if parent:
@@ -676,9 +835,17 @@ class LayersDock(QDockWidget):
         return self.tree_widget._layer_from_tree_item(tree_item)
     
     def _on_layer_selected(self, layer_id):
-        """Handle layer selection - select corresponding graphics item. Support multiple selection."""
+        """Handle layer selection - select corresponding graphics item and update opacity control."""
         if layer_id in self.layer_map:
             layer_item = self.layer_map[layer_id]
+            # Update opacity slider and spinbox to show selected layer's opacity
+            self.opacity_slider.blockSignals(True)
+            self.opacity_value.blockSignals(True)
+            self.opacity_slider.setValue(layer_item.opacity)
+            self.opacity_value.setValue(layer_item.opacity)
+            self.opacity_slider.blockSignals(False)
+            self.opacity_value.blockSignals(False)
+            
             if layer_item.graphics_item and not layer_item.locked:
                 scene = layer_item.graphics_item.scene()
                 if scene:
@@ -806,6 +973,9 @@ class LayersDock(QDockWidget):
                 menu.addAction("Ungroup", self._ungroup_layer)
             
             menu.addSeparator()
+            menu.addAction("Move Up", self._move_layer_up)
+            menu.addAction("Move Down", self._move_layer_down)
+            menu.addSeparator()
             menu.addAction("Hide Others", self._hide_others)
             menu.addAction("Show All", self._show_all)
             menu.addAction("Lock Others", self._lock_others)
@@ -846,6 +1016,66 @@ class LayersDock(QDockWidget):
                 del self.layer_map[layer_item.layer_id]
             
             self.tree_widget.layers_changed.emit()
+    
+    def _move_layer_up(self):
+        """Move selected layer up within its parent."""
+        selected_items = self.tree_widget.selectedItems()
+        if not selected_items:
+            return
+        
+        tree_item = selected_items[0]
+        layer_item = self._layer_from_tree_item(tree_item)
+        
+        if not layer_item or layer_item.layer_id == "root":
+            return
+        
+        parent = layer_item.parent or self.root_layer
+        current_index = parent.children.index(layer_item)
+        
+        # Can't move up if already at top
+        if current_index <= 0:
+            return
+        
+        # Swap with previous
+        parent.children[current_index], parent.children[current_index - 1] = \
+            parent.children[current_index - 1], parent.children[current_index]
+        
+        # Rebuild tree to reflect changes
+        self._rebuild_tree()
+        self.tree_widget.layers_reordered.emit()
+    
+    def _move_layer_down(self):
+        """Move selected layer down within its parent."""
+        selected_items = self.tree_widget.selectedItems()
+        if not selected_items:
+            return
+        
+        tree_item = selected_items[0]
+        layer_item = self._layer_from_tree_item(tree_item)
+        
+        if not layer_item or layer_item.layer_id == "root":
+            return
+        
+        parent = layer_item.parent or self.root_layer
+        current_index = parent.children.index(layer_item)
+        
+        # Can't move down if already at bottom
+        if current_index >= len(parent.children) - 1:
+            return
+        
+        # Swap with next
+        parent.children[current_index], parent.children[current_index + 1] = \
+            parent.children[current_index + 1], parent.children[current_index]
+        
+        # Rebuild tree to reflect changes
+        self._rebuild_tree()
+        self.tree_widget.layers_reordered.emit()
+    
+    def _rebuild_tree(self):
+        """Rebuild the tree widget from the layer hierarchy."""
+        self.tree_widget.clear()
+        for child in self.root_layer.children:
+            self._add_tree_item(child)
     
     def _hide_others(self):
         """Hide all layers except selected."""
