@@ -38,7 +38,6 @@ ACCENT_YELLOW_DARK = "#f9ab00"    # Darker yellow
 
 # Interactive colors
 COLOR_SELECTED = "#0d47a1"        # Tree item selected (dark blue)
-COLOR_HOVER = "rgba(52, 168, 83, 0.1)"  # Hover effect (green with transparency)
 COLOR_SELECTED_ALT = "#2a82da"    # Alternative selected color (lighter blue)
 COLOR_SELECTION_HIGHLIGHT = "#42B8E6"  # Selection highlight
 COLOR_SELECTION_HIGHLIGHT_ALT = "rgba(42, 130, 218, 128)"  # Selection with transparency

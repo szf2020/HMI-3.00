@@ -59,7 +59,6 @@ class ViewMenu:
             ("Controller List", IconService.get_icon('dock-controller-list')),
             ("Data View", IconService.get_icon('dock-data-view')),
             ("Screen Image List", IconService.get_icon('dock-screen-image-list')),
-            ("Layers", IconService.get_icon('dock-library')),
         ]
         self._create_checkable_actions(self.docking_window_menu, docking_items)
 

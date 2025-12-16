@@ -221,7 +221,6 @@ pen = QPen(QColor(colors.COLOR_TRANSFORM_BORDER), 2)
 ## Files Updated with Centralized Styles
 
 - `main_window/main_window.py`
-- `main_window/docking_windows/layers_dock.py`
 - `main_window/widgets/tree.py`
 - `main_window/widgets/pattern_widget.py`
 - `main_window/widgets/gradient_widget.py`

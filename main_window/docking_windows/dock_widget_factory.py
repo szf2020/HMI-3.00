@@ -11,7 +11,6 @@ from .data_browser_dock import DataBrowserDock
 from .ip_address_dock import IPAddressDock
 from .controller_list_dock import ControllerListDock
 from .data_view_dock import DataViewDock
-from .layers_dock import LayersDock
 
 class DockWidgetFactory:
     """
@@ -48,7 +47,6 @@ class DockWidgetFactory:
         self.docks["ip_address"] = IPAddressDock(self.main_window)
         self.docks["controller_list"] = ControllerListDock(self.main_window)
         self.docks["data_view"] = DataViewDock(self.main_window)
-        self.docks["layers"] = LayersDock(self.main_window)
 
     def get_dock(self, name):
         """

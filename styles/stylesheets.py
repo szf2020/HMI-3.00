@@ -30,16 +30,21 @@ def get_tree_widget_stylesheet() -> str:
     """
 
 
-def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "") -> str:
+def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "", 
+                                  vline_path: str = "", branch_more_path: str = "", 
+                                  branch_end_path: str = "") -> str:
     """
-    Generate advanced stylesheet for project tree widgets.
+    Generate advanced stylesheet for project tree widgets with branch lines.
     
     Args:
-        expand_icon_path: Path to expand icon
-        collapse_icon_path: Path to collapse icon
+        expand_icon_path: Path to expand icon (plus/add icon)
+        collapse_icon_path: Path to collapse icon (minus/subtract icon)
+        vline_path: Path to vertical line SVG
+        branch_more_path: Path to T-junction branch SVG
+        branch_end_path: Path to L-corner branch SVG
         
     Returns:
-        QSS stylesheet string for advanced tree widgets
+        QSS stylesheet string for advanced tree widgets with hierarchy lines
     """
     return f"""
         QTreeWidget {{
@@ -50,102 +55,71 @@ def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: 
             gridline-color: {c.BG_DARK_SECONDARY};
             outline: none;
             margin-left: 0px;
+            show-decoration-selected: 1;
         }}
         QTreeWidget::item {{
             padding: 4px 2px;
-            border-left: 2px solid {c.ACCENT_GREEN};
             margin-left: 0px;
             color: {c.TEXT_PRIMARY};
+            min-height: 20px;
         }}
         QTreeWidget::item:selected {{
             background-color: {c.COLOR_SELECTED_ALT};
-            border-left: 2px solid {c.ACCENT_GREEN};
             color: {c.TEXT_PRIMARY};
         }}
-        QTreeWidget::branch:has-children:closed {{
-            image: url("{expand_icon_path}");
-            background-color: transparent;
-            width: 20px;
-            height: 20px;
-        }}
-        QTreeWidget::branch:has-children:open {{
-            image: url("{collapse_icon_path}");
-            background-color: transparent;
-            width: 20px;
-            height: 20px;
-        }}
-        QTreeWidget::branch:has-siblings {{
-            border-image: none;
-        }}
+
+        
+        /* Default branch styling */
         QTreeWidget::branch {{
+            width: 12px;
+            height: 12px;
+            padding-top: 7px;
+            padding-left: 0px;
+            padding-right: 2px;
+            padding-bottom: 7px;
             background-color: transparent;
-            margin-right: 4px;
-            margin-left: 4px;
-            margin-top: 4px;
-            margin-bottom: 4px;
         }}
+        
+        /* Branch with expand button (collapsed with children) */
+        QTreeWidget::branch:has-children:!has-siblings:closed {{
+            image: url("{expand_icon_path}");
+            border-image: url("{branch_end_path}") 0;
+        }}
+        QTreeWidget::branch:closed:has-children:has-siblings {{
+            image: url("{expand_icon_path}");
+            border-image: url("{branch_more_path}") 0;
+        }}
+        
+        /* Branch with collapse button (expanded with children) */
+        QTreeWidget::branch:open:has-children:!has-siblings {{
+            image: url("{collapse_icon_path}");
+            border-image: url("{branch_end_path}") 0;
+        }}
+        QTreeWidget::branch:open:has-children:has-siblings {{
+            image: url("{collapse_icon_path}");
+            border-image: url("{branch_more_path}") 0;
+        }}
+        
+        /* Vertical line for siblings (items that have more siblings below) - full height centered */
+        QTreeWidget::branch:has-siblings:!adjoins-item {{
+            border-image: url("{vline_path}") 0;
+        }}
+        
+        /* T-junction: vertical line + horizontal line for items with siblings below */
+        QTreeWidget::branch:has-siblings:adjoins-item {{
+            border-image: url("{branch_more_path}") 0;
+        }}
+        
+        /* L-corner for last item in a group (no siblings below) */
+        QTreeWidget::branch:!has-siblings:adjoins-item {{
+            border-image: url("{branch_end_path}") 0;
+        }}
+        
         QHeaderView::section {{
             background-color: {c.BG_DARK_QUATERNARY};
             color: {c.TEXT_PRIMARY};
             padding: 3px;
             border: 1px solid {c.BORDER_HEADER};
-        }}
-    """
-
-
-def get_layers_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "") -> str:
-    """
-    Generate stylesheet for layers tree widget with enhanced spacing and icon sizing.
-    
-    Args:
-        expand_icon_path: Path to expand icon
-        collapse_icon_path: Path to collapse icon
-        
-    Returns:
-        QSS stylesheet string for layers tree widget
-    """
-    return f"""
-        QTreeWidget {{
-            border: none;
-            background-color: {c.BG_DARK_SECONDARY};
-            alternate-background-color: {c.BG_DARK_SECONDARY};
-            color: {c.TEXT_PRIMARY};
-            gridline-color: {c.BG_DARK_SECONDARY};
-            outline: none;
-            margin-left: 0px;
-        }}
-        QTreeWidget::item {{
-            padding: 4px 2px;
-            border-left: 2px solid {c.ACCENT_GREEN};
-            margin-left: 0px;
-            color: {c.TEXT_PRIMARY};
-        }}
-        QTreeWidget::item:selected {{
-            background-color: {c.COLOR_SELECTED_ALT};
-            border-left: 2px solid {c.ACCENT_GREEN};
-            color: {c.TEXT_PRIMARY};
-        }}
-        QTreeWidget::branch:has-children:closed {{
-            image: url("{expand_icon_path}");
-            background-color: transparent;
-            width: 24px;
-            height: 24px;
-        }}
-        QTreeWidget::branch:has-children:open {{
-            image: url("{collapse_icon_path}");
-            background-color: transparent;
-            width: 24px;
-            height: 24px;
-        }}
-        QTreeWidget::branch:has-siblings {{
-            border-image: none;
-        }}
-        QTreeWidget::branch {{
-            background-color: transparent;
-            margin-right: 6px;
-            margin-left: 4px;
-            margin-top: 6px;
-            margin-bottom: 6px;
         }}
     """
 
@@ -362,7 +336,6 @@ def get_normal_text_stylesheet() -> str:
 STYLESHEETS = {
     "tree_widget": get_tree_widget_stylesheet,
     "project_tree": get_project_tree_stylesheet,
-    "layers_tree": get_layers_tree_stylesheet,
     "status_bar": get_status_bar_stylesheet,
     "tool_button": get_tool_button_stylesheet,
     "formula_hint": get_formula_hint_stylesheet,

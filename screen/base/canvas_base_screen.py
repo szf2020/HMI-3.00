@@ -204,7 +204,6 @@ class CanvasBaseScreen(QGraphicsView):
         if 'items' in self.screen_data:
             for item_data in self.screen_data['items']:
                 # Pass is_restoring=True to prevent signal emission during restore
-                # Layers will be created only for new objects, not restored ones
                 self.create_graphic_item_from_data(item_data, is_restoring=True)
 
     def save_items(self):
@@ -413,7 +412,6 @@ class CanvasBaseScreen(QGraphicsView):
                         logger.error(f"CRITICAL: Error creating transform handler: {e}", exc_info=True)
                         self.transform_handler = None
             
-            # Emit signal for layers dock to sync selection
             # Calculate newly selected items (optimization: only valid BaseGraphicObject items)
             self.canvas_selection_changed.emit(valid_items, [])
         except Exception as e:

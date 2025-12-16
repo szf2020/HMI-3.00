@@ -26,18 +26,33 @@ class CustomTreeWidget(QTreeWidget):
         expand_icon_path = str(self.icon_path / "icon-park-solid-add.svg").replace("\\", "/")
         collapse_icon_path = str(self.icon_path / "icon-park-solid-subtract.svg").replace("\\", "/")
         
+        # Load branch line SVG icons
+        vline_path = str(self.icon_path / "branch-vline.svg").replace("\\", "/")
+        branch_more_path = str(self.icon_path / "branch-more.svg").replace("\\", "/")
+        branch_end_path = str(self.icon_path / "branch-end.svg").replace("\\", "/")
+        
         # Configure selection mode and row appearance
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(False)  # Disable for cleaner branch lines
         self.setRootIsDecorated(True)
+        
+        # Set indentation for proper branch line display
+        self.setIndentation(24)  # Proper spacing for branch lines
+        
+        # Enable uniform row heights for consistent line drawing
+        self.setUniformRowHeights(True)
         
         # Set custom stylesheet with branch styling using icon paths
         # Store paths for later use by subclasses
         self._expand_icon_path = expand_icon_path
         self._collapse_icon_path = collapse_icon_path
+        self._vline_path = vline_path
+        self._branch_more_path = branch_more_path
+        self._branch_end_path = branch_end_path
         
         # Apply default stylesheet (can be overridden by subclasses)
-        self._apply_default_stylesheet(expand_icon_path, collapse_icon_path)
+        self._apply_default_stylesheet(expand_icon_path, collapse_icon_path, 
+                                        vline_path, branch_more_path, branch_end_path)
         
         # Connect itemExpanded and itemCollapsed signals
         self.itemExpanded.connect(self._on_item_expanded)
@@ -47,9 +62,11 @@ class CustomTreeWidget(QTreeWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context_menu)
     
-    def _apply_default_stylesheet(self, expand_icon_path, collapse_icon_path):
+    def _apply_default_stylesheet(self, expand_icon_path, collapse_icon_path,
+                                   vline_path="", branch_more_path="", branch_end_path=""):
         """Apply the default stylesheet. Can be overridden by subclasses."""
-        stylesheet = stylesheets.get_project_tree_stylesheet(expand_icon_path, collapse_icon_path)
+        stylesheet = stylesheets.get_project_tree_stylesheet(
+            expand_icon_path, collapse_icon_path, vline_path, branch_more_path, branch_end_path)
         self.setStyleSheet(stylesheet)
     
     def _on_context_menu(self, position):
