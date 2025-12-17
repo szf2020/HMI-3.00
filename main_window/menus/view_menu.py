@@ -51,6 +51,7 @@ class ViewMenu:
             ("Project Tree", IconService.get_icon('dock-project-tree')),
             ("Screen Tree", IconService.get_icon('dock-screen-tree')),
             ("System Tree", IconService.get_icon('dock-system-tree')),
+            ("Layers", IconService.get_icon('dock-layers')),
             ("Tag Search", IconService.get_icon('dock-tag-search')),
             ("Data Browser", IconService.get_icon('dock-data-browser')),
             ("Property Tree", IconService.get_icon('dock-property-tree')),

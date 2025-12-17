@@ -279,6 +279,13 @@ class MainWindow(QMainWindow):
         screen_widget.tool_reset.connect(self.on_tool_reset)
         screen_widget.object_data_changed.connect(self.update_object_info)
         
+        # Connect canvas to layers dock for synchronization
+        layers_dock = self.dock_factory.get_dock("layers")
+        if layers_dock:
+            screen_widget.graphics_item_added.connect(layers_dock.add_canvas_object)
+            screen_widget.graphics_item_removed.connect(layers_dock.remove_canvas_object)
+            screen_widget.canvas_selection_changed.connect(layers_dock.sync_canvas_selection)
+        
         if screen_type == 'base':
             tab_title = f"[B] - {screen_number} - {screen_data.get('name')}"
             icon = IconService.get_icon("screen-base")
@@ -543,6 +550,14 @@ class MainWindow(QMainWindow):
         """Handles syncing UI when the current tab is changed."""
         widget = self.central_widget.widget(index)
         self.update_status_bar(widget)
+        
+        # Sync layers panel with the new active screen
+        layers_dock = self.dock_factory.get_dock("layers")
+        if layers_dock:
+            if isinstance(widget, CanvasBaseScreen):
+                layers_dock.set_current_canvas(widget)
+            else:
+                layers_dock.set_current_canvas(None)
         
         # Sync tool state to the newly active tab
         if isinstance(widget, CanvasBaseScreen):
@@ -830,10 +845,12 @@ class MainWindow(QMainWindow):
         property_tree = self.dock_factory.get_dock("property_tree")
         library = self.dock_factory.get_dock("library")
         screen_image_list = self.dock_factory.get_dock("screen_image_list")
+        layers = self.dock_factory.get_dock("layers")
         
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, property_tree)
         self.splitDockWidget(property_tree, library, Qt.Orientation.Vertical)
         self.tabifyDockWidget(library, screen_image_list)
+        self.tabifyDockWidget(screen_image_list, layers)
 
         # --- Bottom Area ---
         tag_search = self.dock_factory.get_dock("tag_search")

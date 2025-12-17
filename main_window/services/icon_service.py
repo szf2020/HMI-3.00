@@ -253,6 +253,14 @@ class IconService:
         "icon-park-solid-add": "icon-park-solid-add.svg",
         "icon-park-solid-subtract": "icon-park-solid-subtract.svg",
         
+        # Layer Icons
+        "layer-visible": "layer-visible.svg",
+        "layer-hidden": "layer-hidden.svg",
+        "layer-locked": "layer-locked.svg",
+        "layer-unlocked": "layer-unlocked.svg",
+        "layer-group": "layer-group.svg",
+        "layer-item": "layer-item.svg",
+        "dock-layers": "dock-layers.svg",
 
     }
 
