@@ -231,7 +231,7 @@ class SpreadsheetItem(QTableWidgetItem):
         bg = data.get('bg_color')
         self.setBackground(QColor(bg) if bg else QBrush())
         fg = data.get('text_color')
-        self.setForeground(QColor(fg) if fg else QBrush())
+        self.setForeground(QColor(fg) if fg else QColor(colors.TEXT_PRIMARY))
 
 class ExcelHeaderView(QHeaderView):
     def __init__(self, orientation, parent=None):
@@ -274,6 +274,29 @@ class Spreadsheet(QTableWidget):
         self.comment_service = comment_service
         self.comment_number = comment_number
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setMouseTracking(True)
+        self.hover_row = -1
+        self.hover_col = -1
+        
+        # Set spreadsheet styling
+        self.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {colors.BG_SPREADSHEET};
+                color: {colors.TEXT_PRIMARY};
+                gridline-color: {colors.GRID_LINE};
+                selection-background-color: transparent;
+                selection-color: {colors.TEXT_PRIMARY};
+                border: none;
+            }}
+            QTableWidget::item {{
+                padding: 2px;
+            }}
+            QLineEdit {{
+                background-color: {colors.BG_DARK_TERTIARY};
+                color: {colors.TEXT_PRIMARY};
+                border: 1px solid {colors.ACCENT_GREEN};
+            }}
+        """)
         
         # Dependency Management
         self.dependents = collections.defaultdict(set) # Key: (row, col), Value: Set of dependent (row, col)
@@ -1061,6 +1084,16 @@ class Spreadsheet(QTableWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self.viewport())
+        
+        # Draw hover effect
+        if self.hover_row != -1 and self.hover_col != -1:
+            rect = self.visualRect(self.model().index(self.hover_row, self.hover_col))
+            if rect.isValid():
+                # Use semi-transparent hover color so text remains visible
+                hover_color = QColor(colors.COLOR_HOVER)
+                hover_color.setAlpha(60) 
+                painter.fillRect(rect, hover_color)
+
         for (row, col), color in self.referenced_cells:
             rect = self.visualRect(self.model().index(row, col))
             if rect.isValid():
@@ -1070,7 +1103,8 @@ class Spreadsheet(QTableWidget):
         for (row, col) in self.highlighted_cells:
             rect = self.visualRect(self.model().index(row, col))
             if rect.isValid():
-                painter.setPen(QPen(QColor("blue"), 2))
+                # Make highlighted cells (blue line) transparent as requested
+                painter.setPen(QPen(Qt.GlobalColor.transparent, 2))
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.drawRect(rect.adjusted(0, 0, -1, -1))
         if not self.selectionModel().hasSelection(): return
@@ -1081,8 +1115,10 @@ class Spreadsheet(QTableWidget):
                 for index in sel_range.indexes():
                     if index != current_index:
                         rect = self.visualRect(index)
-                        painter.fillRect(rect, QColor(217, 217, 217, 128))
+                        # Use a light green for selected cells (Excel style)
+                        painter.fillRect(rect, QColor(34, 139, 34, 40))
         selection_rect = self.visualRegionForSelection(selection).boundingRect()
+        # Draw a solid green border around the selection
         painter.setPen(QPen(QColor(34, 139, 34), 2))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(selection_rect.adjusted(0, 0, -1, -1))
@@ -1100,9 +1136,9 @@ class Spreadsheet(QTableWidget):
         selected_ranges = self.selectedRanges()
         if not selected_ranges: return None
         last_range = selected_ranges[-1]
-        last_item = self.item(last_range.bottomRow(), last_range.rightColumn())
-        if not last_item: return None
-        last_cell_rect = self.visualItemRect(last_item)
+        # Use visualRect with model index instead of item to support empty cells
+        index = self.model().index(last_range.bottomRow(), last_range.rightColumn())
+        last_cell_rect = self.visualRect(index)
         if last_cell_rect.isValid():
             return QRectF(last_cell_rect.right() - 4, last_cell_rect.bottom() - 4, 8, 8)
         return None
@@ -1114,7 +1150,7 @@ class Spreadsheet(QTableWidget):
         is_editing_in_cell = self.state() == QAbstractItemView.State.EditingState
         editor = QApplication.focusWidget() if is_editing_in_cell else None
         if is_editing_in_formula_bar or (is_editing_in_cell and isinstance(editor, QLineEdit) and editor.text().startswith('=')):
-            index = self.indexAt(event.pos())
+            index = self.indexAt(event.position().toPoint())
             if index.isValid():
                 cell_ref = self.get_cell_ref_str(index.row(), index.column())
                 if is_editing_in_formula_bar:
@@ -1131,24 +1167,53 @@ class Spreadsheet(QTableWidget):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        # Update hover state
+        pos = event.position()
+        row = self.rowAt(int(pos.y()))
+        col = self.columnAt(int(pos.x()))
+        
+        if row != self.hover_row or col != self.hover_col:
+            self.hover_row = row
+            self.hover_col = col
+            self.viewport().update()
+
         if self._is_dragging_fill_handle:
-            selection_range = self.selectedRanges()[0]
-            start_rect = self.visualItemRect(self.item(selection_range.topRow(), selection_range.leftColumn()))
+            selection_ranges = self.selectedRanges()
+            if not selection_ranges: return
+            selection_range = selection_ranges[0]
+            # Use visualRect instead of visualItemRect to support empty cells
+            index = self.model().index(selection_range.topRow(), selection_range.leftColumn())
+            start_rect = self.visualRect(index)
+            if not start_rect.isValid(): return
+            
             clamped_pos = event.position()
             if clamped_pos.y() > self.viewport().height():
                  clamped_pos.setY(float(self.viewport().height()))
+            if clamped_pos.x() > self.viewport().width():
+                 clamped_pos.setX(float(self.viewport().width()))
+                 
             self._drag_fill_rect = QRectF(QPointF(start_rect.topLeft()), clamped_pos).normalized()
             self.viewport().update()
         else:
             super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self.hover_row = -1
+        self.hover_col = -1
+        self.viewport().update()
+        super().leaveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self._is_dragging_fill_handle:
             self.setCursor(Qt.CursorShape.ArrowCursor)
             if self._drag_fill_rect:
                 end_row = self.rowAt(int(self._drag_fill_rect.bottom()))
+                end_col = self.columnAt(int(self._drag_fill_rect.right()))
+                
                 if end_row == -1: end_row = self.rowCount() - 1
-                self.perform_fill_drag(end_row)
+                if end_col == -1: end_col = self.columnCount() - 1
+                
+                self.perform_fill_drag(end_row, end_col)
             self._is_dragging_fill_handle = False
             self._drag_start_pos = None
             self._drag_fill_rect = None
@@ -1156,24 +1221,31 @@ class Spreadsheet(QTableWidget):
         else:
             super().mouseReleaseEvent(event)
 
-    def perform_fill_drag(self, end_row):
-        source_range = self.selectedRanges()[0]
-        fill_rows = range(source_range.bottomRow() + 1, end_row + 1)
-        if not fill_rows: return
+    def perform_fill_drag(self, end_row, end_col):
+        selected_ranges = self.selectedRanges()
+        if not selected_ranges: return
+        source_range = selected_ranges[0]
+        
+        # Determine direction
+        rows_ext = end_row - source_range.bottomRow()
+        cols_ext = end_col - source_range.rightColumn()
+        
         changes = []
-        for col in range(source_range.leftColumn(), source_range.rightColumn() + 1):
-            for i, target_row in enumerate(fill_rows, 1):
-                source_row = source_range.topRow() + (i - 1) % source_range.rowCount()
-                source_item = self.item(source_row, col)
-                if not source_item: continue
-                source_data = source_item.get_data()
-                source_text = str(source_data.get('value', ''))
-                new_data = source_data.copy()
-                if source_text.startswith('='):
-                    offset = target_row - source_row
-                    new_data['value'] = re.sub(r"([A-Z]+)(\d+)", lambda m: f"{m.group(1)}{int(m.group(2)) + offset}", source_text, flags=re.IGNORECASE)
-                else:
-                    try:
+        
+        if rows_ext > 0 and (rows_ext >= cols_ext or cols_ext <= 0):
+            # Fill Down
+            fill_rows = range(source_range.bottomRow() + 1, end_row + 1)
+            for col in range(source_range.leftColumn(), source_range.rightColumn() + 1):
+                for i, target_row in enumerate(fill_rows, 1):
+                    source_row = source_range.topRow() + (i - 1) % source_range.rowCount()
+                    source_item = self.item(source_row, col)
+                    source_data = source_item.get_data() if source_item else {'value': ''}
+                    source_text = str(source_data.get('value', ''))
+                    new_data = source_data.copy()
+                    
+                    if source_text.startswith('='):
+                        new_data['value'] = adjust_formula_references(source_text, target_row - source_row, 0)
+                    else:
                         match = re.match(r"^(.*?)(\d+)$", source_text)
                         if match:
                             prefix, num_str = match.groups()
@@ -1181,12 +1253,37 @@ class Spreadsheet(QTableWidget):
                             new_data['value'] = f"{prefix}{new_value}"
                         else:
                             new_data['value'] = source_text
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Error processing cell copy value: {e}")
-                        new_data['value'] = source_text
-                target_item = self.item(target_row, col)
-                old_data = target_item.get_data() if target_item else {'value': ''}
-                changes.append((target_row, col, old_data, new_data))
+                            
+                    target_item = self.item(target_row, col)
+                    old_data = target_item.get_data() if target_item else {'value': ''}
+                    changes.append((target_row, col, old_data, new_data))
+                    
+        elif cols_ext > 0 and (cols_ext > rows_ext or rows_ext <= 0):
+            # Fill Right
+            fill_cols = range(source_range.rightColumn() + 1, end_col + 1)
+            for row in range(source_range.topRow(), source_range.bottomRow() + 1):
+                for i, target_col in enumerate(fill_cols, 1):
+                    source_col = source_range.leftColumn() + (i - 1) % source_range.columnCount()
+                    source_item = self.item(row, source_col)
+                    source_data = source_item.get_data() if source_item else {'value': ''}
+                    source_text = str(source_data.get('value', ''))
+                    new_data = source_data.copy()
+                    
+                    if source_text.startswith('='):
+                        new_data['value'] = adjust_formula_references(source_text, 0, target_col - source_col)
+                    else:
+                        match = re.match(r"^(.*?)(\d+)$", source_text)
+                        if match:
+                            prefix, num_str = match.groups()
+                            new_value = int(num_str) + i
+                            new_data['value'] = f"{prefix}{new_value}"
+                        else:
+                            new_data['value'] = source_text
+                            
+                    target_item = self.item(row, target_col)
+                    old_data = target_item.get_data() if target_item else {'value': ''}
+                    changes.append((row, target_col, old_data, new_data))
+
         if changes:
             command = ChangeCellCommand(self, changes, "Fill Drag")
             self.undo_stack.push(command)

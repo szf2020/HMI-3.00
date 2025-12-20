@@ -37,10 +37,11 @@ ACCENT_YELLOW = "#fbbc05"         # Google Yellow
 ACCENT_YELLOW_DARK = "#f9ab00"    # Darker yellow
 
 # Interactive colors
-COLOR_SELECTED = "#0d47a1"        # Tree item selected (dark blue)
-COLOR_SELECTED_ALT = "#2a82da"    # Alternative selected color (lighter blue)
-COLOR_SELECTION_HIGHLIGHT = "#42B8E6"  # Selection highlight
-COLOR_SELECTION_HIGHLIGHT_ALT = "rgba(42, 130, 218, 128)"  # Selection with transparency
+COLOR_SELECTED = "transparent"        # Tree item selected (transparent)
+COLOR_SELECTED_ALT = "transparent"    # Alternative selected color (transparent)
+COLOR_HOVER = "#505050"           # Hover color (gray)
+COLOR_SELECTION_HIGHLIGHT = "transparent"  # Selection highlight
+COLOR_SELECTION_HIGHLIGHT_ALT = "rgba(0, 0, 0, 0)"  # Selection with transparency (transparent)
 
 # ============================================================================
 # BORDER AND SEPARATOR COLORS
@@ -84,7 +85,7 @@ COLOR_DEFAULT_SHAPE_BORDER = "#000000"      # Black border for shapes
 COLOR_ERROR = "#FF0000"           # Error state
 COLOR_WARNING = "#FFA500"         # Warning state
 COLOR_SUCCESS = "#00AA00"         # Success state
-COLOR_DEBUG_BORDER = "#0078D7"    # Debug/focus border (Microsoft Blue)
+COLOR_DEBUG_BORDER = "transparent"    # Debug/focus border (transparent)
 
 # ============================================================================
 # PATTERN AND GRADIENT COLORS

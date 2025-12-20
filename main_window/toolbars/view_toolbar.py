@@ -44,6 +44,10 @@ class ViewToolbar(QToolBar):
         self.addWidget(self.object_snap_checkbox)
         self.addSeparator()
 
+        # Select Mode Action
+        self.addAction(view_menu.select_mode_action)
+        self.addSeparator()
+
         # Zoom Controls
         zoom_in_icon = IconService.get_icon('zoom-in')
         zoom_out_icon = IconService.get_icon('zoom-out')
@@ -75,6 +79,7 @@ class ViewToolbar(QToolBar):
         
         self.state_spin_box = QSpinBox()
         self.state_spin_box.setRange(0, self.max_states - 1)
+        self.state_spin_box.setFixedWidth(50)
         self.state_spin_box.valueChanged.connect(self.set_state_from_spinbox)
         self.addWidget(self.state_spin_box)
         

@@ -115,7 +115,10 @@ class ScreenDesignDialog(QDialog):
                 padding: 5px;
             }}
             QPushButton:hover {{
-                border: 2px solid #5B9BD5;
+                background-color: #505050;
+                border: 2px solid transparent;
+                border: 2px solid transparent;
+                border: 2px solid transparent;
             }}
         """)
 

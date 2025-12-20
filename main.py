@@ -37,13 +37,18 @@ def main():
     dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
     dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
     dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+    dark_palette.setColor(QPalette.ColorRole.Highlight, Qt.GlobalColor.transparent)
+    dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
     app.setPalette(dark_palette)
 
     # Load and apply centralized stylesheets
     from styles import stylesheets
-    app.setStyleSheet(stylesheets.get_tool_button_stylesheet())
+    global_stylesheet = (
+        stylesheets.get_tool_button_stylesheet() + 
+        stylesheets.get_menu_stylesheet() + 
+        stylesheets.get_toolbar_stylesheet()
+    )
+    app.setStyleSheet(global_stylesheet)
     
     # Initialize the settings service
     settings_service = SettingsService('settings.json')

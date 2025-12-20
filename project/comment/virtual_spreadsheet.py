@@ -260,6 +260,8 @@ class VirtualSpreadsheet(QAbstractScrollArea):
         self.selected_ranges = []
         self.current_row = 0
         self.current_col = 0
+        self.hover_row = -1
+        self.hover_col = -1
         self.selection_mode = QAbstractItemView.SelectionMode.ExtendedSelection
         
         # Performance
@@ -280,6 +282,7 @@ class VirtualSpreadsheet(QAbstractScrollArea):
         # Setup UI
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.viewport().setMouseTracking(True)
         
         # Connect scrollbar signals
         self.verticalScrollBar().valueChanged.connect(self._on_scroll)
@@ -424,6 +427,11 @@ class VirtualSpreadsheet(QAbstractScrollArea):
         """Render a single cell."""
         # Cell background
         bg_color = QColor(cell.bg_color) if cell.bg_color else QColor(colors.BG_SPREADSHEET)
+        
+        # Hover effect
+        if row == self.hover_row and col == self.hover_col:
+            bg_color = QColor(colors.COLOR_HOVER)
+            
         painter.fillRect(x, y, self.cell_width, self.cell_height, bg_color)
         
         # Cell border
@@ -432,8 +440,11 @@ class VirtualSpreadsheet(QAbstractScrollArea):
         
         # Selection highlight
         if self._is_cell_selected(row, col):
-            painter.fillRect(x, y, self.cell_width - 1, self.cell_height - 1, QColor(colors.COLOR_SELECTION_HIGHLIGHT_ALT))
-            painter.setPen(QPen(QColor(colors.COLOR_SELECTION_HIGHLIGHT), 2))
+            # Make selection background transparent as requested
+            # painter.fillRect(x, y, self.cell_width - 1, self.cell_height - 1, QColor(colors.COLOR_SELECTION_HIGHLIGHT_ALT))
+            
+            # Make selection border transparent as requested
+            painter.setPen(QPen(Qt.GlobalColor.transparent, 2))
             painter.drawRect(x, y, self.cell_width - 1, self.cell_height - 1)
         
         # Cell text
@@ -473,18 +484,31 @@ class VirtualSpreadsheet(QAbstractScrollArea):
         self.viewport().update()
     
     def mouseMoveEvent(self, event):
-        """Handle mouse move for selection."""
+        """Handle mouse move for selection and hover."""
+        v_scroll = self.verticalScrollBar().value()
+        h_scroll = self.horizontalScrollBar().value()
+        
+        col = int((event.position().x() + h_scroll) // self.cell_width)
+        row = int((event.position().y() + v_scroll) // self.cell_height)
+        
+        # Update hover state
+        if row != self.hover_row or col != self.hover_col:
+            self.hover_row = row
+            self.hover_col = col
+            self.viewport().update()
+            
         if event.buttons() & Qt.MouseButton.LeftButton:
-            v_scroll = self.verticalScrollBar().value()
-            h_scroll = self.horizontalScrollBar().value()
-            
-            col = (event.position().x() + h_scroll) // self.cell_width
-            row = (event.position().y() + v_scroll) // self.cell_height
-            
             if row >= 0 and col >= 0:
                 self.current_row = row
                 self.current_col = col
                 self.viewport().update()
+    
+    def leaveEvent(self, event):
+        """Clear hover state when mouse leaves."""
+        self.hover_row = -1
+        self.hover_col = -1
+        self.viewport().update()
+        super().leaveEvent(event)
     
     def wheelEvent(self, event):
         """Handle mouse wheel scrolling."""

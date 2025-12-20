@@ -19,14 +19,15 @@ class DockingToolbar(QToolBar):
             ("Project Tree", IconService.get_icon('dock-project-tree')),
             ("Screen Tree", IconService.get_icon('dock-screen-tree')),
             ("System Tree", IconService.get_icon('dock-system-tree')),
-            ("Property Tree", IconService.get_icon('dock-property-tree')),
-            ("Library", IconService.get_icon('dock-library')),
-            ("Screen Image List", IconService.get_icon('dock-screen-image-list')),
+            ("Layers", IconService.get_icon('dock-layers')),
             ("Tag Search", IconService.get_icon('dock-tag-search')),
             ("Data Browser", IconService.get_icon('dock-data-browser')),
+            ("Property Tree", IconService.get_icon('dock-property-tree')),
             ("IP Address", IconService.get_icon('dock-ip-address')),
+            ("Library", IconService.get_icon('dock-library')),
             ("Controller List", IconService.get_icon('dock-controller-list')),
             ("Data View", IconService.get_icon('dock-data-view')),
+            ("Screen Image List", IconService.get_icon('dock-screen-image-list')),
         ]
         
         for text, icon in docking_items:

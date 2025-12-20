@@ -22,7 +22,6 @@ from .toolbars.edit_toolbar import EditToolbar
 from .toolbars.alignment_toolbar import AlignmentToolbar
 from .toolbars.figure_toolbar import FigureToolbar
 from .toolbars.object_toolbar import ObjectToolbar
-from .toolbars.debug_toolbar import DebugToolbar
 
 # Import tools
 from .toolbars.drawing_tools.rectangle_tool import RectangleTool
@@ -304,7 +303,7 @@ class MainWindow(QMainWindow):
 
     def on_tool_reset(self):
         """Handles resetting the tool to selection mode."""
-        self.edit_menu.select_mode_action.setChecked(True)
+        self.view_menu.select_mode_action.setChecked(True)
         # This will trigger on_tool_changed via signal but it's fine
 
     def open_comment_table(self, comment_data):
@@ -525,22 +524,45 @@ class MainWindow(QMainWindow):
         # --- Tool Selection ---
         self.tools_group.triggered.connect(self.on_tool_changed)
 
+        # --- Display Item Selection ---
+        self.view_menu.tag_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('tag', checked))
+        self.view_menu.object_id_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('id', checked))
+        self.view_menu.transform_line_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('transform', checked))
+        self.view_menu.click_area_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('click_area', checked))
+
+    def toggle_canvas_overlay(self, overlay_type, visible):
+        """Toggles visibility of overlays on the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen):
+            active_screen.toggle_overlays(overlay_type, visible)
+
     def on_tool_changed(self, action):
         """Handles switching between tools."""
         active_screen = self.get_active_screen_widget()
         if not isinstance(active_screen, CanvasBaseScreen):
             return
 
-        if action == self.edit_menu.select_mode_action:
-            active_screen.set_tool(None)
-        elif action == self.figure_menu.rectangle_action:
-            active_screen.set_tool(RectangleTool(active_screen))
-        elif action == self.figure_menu.ellipse_action:
-            active_screen.set_tool(EllipseTool(active_screen))
-        # Add logic for other tools here as they are implemented
+        if action.isChecked():
+            # Uncheck all other actions in the group to maintain exclusivity
+            for other_action in self.tools_group.actions():
+                if other_action != action:
+                    other_action.setChecked(False)
+
+            if action == self.view_menu.select_mode_action:
+                active_screen.set_tool(None)
+            elif action == self.figure_menu.rectangle_action:
+                active_screen.set_tool(RectangleTool(active_screen))
+            elif action == self.figure_menu.ellipse_action:
+                active_screen.set_tool(EllipseTool(active_screen))
+            # Add logic for other tools here as they are implemented
         else:
-            # Placeholder for tools not yet implemented
-            pass
+            # If a tool is unchecked, default back to selection mode
+            # If Select Mode itself is unchecked, it still results in selection mode (None)
+            active_screen.set_tool(None)
+            if action != self.view_menu.select_mode_action:
+                # If it wasn't Select Mode that was unchecked, we might want to re-enable Select Mode
+                # but the user asked for "on & off", so we'll allow it to be off.
+                pass
 
     def get_active_screen_widget(self):
         """Returns the widget from the currently active tab."""
@@ -563,7 +585,16 @@ class MainWindow(QMainWindow):
         if isinstance(widget, CanvasBaseScreen):
             # Check currently selected tool in the action group
             checked_action = self.tools_group.checkedAction()
-            self.on_tool_changed(checked_action)
+            if checked_action:
+                self.on_tool_changed(checked_action)
+            else:
+                widget.set_tool(None)
+            
+            # Sync display item states
+            widget.toggle_overlays('tag', self.view_menu.tag_action.isChecked())
+            widget.toggle_overlays('id', self.view_menu.object_id_action.isChecked())
+            widget.toggle_overlays('transform', self.view_menu.transform_line_action.isChecked())
+            widget.toggle_overlays('click_area', self.view_menu.click_area_action.isChecked())
             
     # --- Zoom Handlers ---
     def on_zoom_action_triggered(self, action):
@@ -781,14 +812,13 @@ class MainWindow(QMainWindow):
 
     def _setup_tool_groups(self):
         """
-        Groups tool actions (select, figure, object) into a mutually exclusive group.
-        This ensures only one tool is active at a time.
+        Groups tool actions (select, figure, object) into a group.
         """
         self.tools_group = QActionGroup(self)
-        self.tools_group.setExclusive(True)
+        self.tools_group.setExclusive(False) # Allow manual toggle for "on & off" behavior
 
-        # Add "Select" tool from Edit menu
-        self.tools_group.addAction(self.edit_menu.select_mode_action)
+        # Add "Select" tool from View menu
+        self.tools_group.addAction(self.view_menu.select_mode_action)
 
         # Add all Figure tools
         for action in self.figure_menu.actions:
@@ -808,7 +838,6 @@ class MainWindow(QMainWindow):
         self.toolbars["Alignment"] = AlignmentToolbar(self, self.edit_menu)
         self.toolbars["Figure"] = FigureToolbar(self, self.figure_menu)
         self.toolbars["Object"] = ObjectToolbar(self, self.object_menu)
-        self.toolbars["Debug"] = DebugToolbar(self)
         
         for name, toolbar in self.toolbars.items():
             # Set a unique object name for each toolbar so its state can be saved.
@@ -938,6 +967,14 @@ class MainWindow(QMainWindow):
             if 0 <= state_number < view_toolbar.max_states:
                 view_toolbar.current_state = state_number
                 view_toolbar.update_state_ui()
+
+            # Restore display item states
+            display_items = view_settings.get("display_items", {})
+            self.view_menu.select_mode_action.setChecked(display_items.get("select_mode", True))
+            self.view_menu.tag_action.setChecked(display_items.get("tag", False))
+            self.view_menu.object_id_action.setChecked(display_items.get("object_id", False))
+            self.view_menu.transform_line_action.setChecked(display_items.get("transform_line", True))
+            self.view_menu.click_area_action.setChecked(display_items.get("click_area", False))
 
     def _sync_checkboxes_to_widget_visibility(self):
         """

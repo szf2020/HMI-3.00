@@ -12,6 +12,8 @@ from .ip_address_dock import IPAddressDock
 from .controller_list_dock import ControllerListDock
 from .data_view_dock import DataViewDock
 from .layers_dock import LayersDock
+from ..services.icon_service import IconService
+from ..widgets.dock_title_bar import DockTitleBar
 
 class DockWidgetFactory:
     """
@@ -49,6 +51,33 @@ class DockWidgetFactory:
         self.docks["controller_list"] = ControllerListDock(self.main_window)
         self.docks["data_view"] = DataViewDock(self.main_window)
         self.docks["layers"] = LayersDock(self.main_window)
+
+        # Set window icons for all docks
+        dock_icons = {
+            "project_tree": "dock-project-tree",
+            "screen_tree": "dock-screen-tree",
+            "system_tree": "dock-system-tree",
+            "property_tree": "dock-property-tree",
+            "library": "dock-library",
+            "screen_image_list": "dock-screen-image-list",
+            "tag_search": "dock-tag-search",
+            "data_browser": "dock-data-browser",
+            "ip_address": "dock-ip-address",
+            "controller_list": "dock-controller-list",
+            "data_view": "dock-data-view",
+            "layers": "dock-layers"
+        }
+        
+        for name, icon_name in dock_icons.items():
+            if name in self.docks:
+                dock = self.docks[name]
+                icon = IconService.get_icon(icon_name)
+                dock.setWindowIcon(icon)
+                
+                # Set custom title bar with icon
+                title = dock.windowTitle()
+                title_bar = DockTitleBar(dock, title, icon)
+                dock.setTitleBarWidget(title_bar)
 
     def get_dock(self, name):
         """

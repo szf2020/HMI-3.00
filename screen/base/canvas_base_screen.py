@@ -344,6 +344,8 @@ class CanvasBaseScreen(QGraphicsView):
             self.show_transform_lines = visible
             if self.transform_handler:
                 self.transform_handler.setVisible(visible)
+        elif overlay_type == 'click_area':
+            self.show_click_area = visible
         
         for item in self.scene.items():
             if item.parentItem():

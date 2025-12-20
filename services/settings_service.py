@@ -53,7 +53,14 @@ class SettingsService:
             "view_settings": {
                 "object_snap": True,
                 "snap_distance": "10",
-                "state_number": 0
+                "state_number": 0,
+                "display_items": {
+                    "select_mode": True,
+                    "tag": False,
+                    "object_id": False,
+                    "transform_line": True,
+                    "click_area": False
+                }
             }
         }
 
@@ -82,7 +89,14 @@ class SettingsService:
             self.settings['view_settings'] = {
                 "object_snap": view_toolbar.object_snap_checkbox.isChecked(),
                 "snap_distance": view_toolbar.snap_combo.currentText(),
-                "state_number": view_toolbar.current_state
+                "state_number": view_toolbar.current_state,
+                "display_items": {
+                    "select_mode": main_window.view_menu.select_mode_action.isChecked(),
+                    "tag": main_window.view_menu.tag_action.isChecked(),
+                    "object_id": main_window.view_menu.object_id_action.isChecked(),
+                    "transform_line": main_window.view_menu.transform_line_action.isChecked(),
+                    "click_area": main_window.view_menu.click_area_action.isChecked()
+                }
             }
         
         with open(self.file_path, 'w') as f:

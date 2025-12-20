@@ -39,7 +39,6 @@ class ViewMenu:
             ("Alignment", IconService.get_icon('view-alignment')),
             ("Figure", IconService.get_icon('view-figure')),
             ("Object", IconService.get_icon('view-object')),
-            ("Debug", IconService.get_icon('view-debug')),
         ]
         self._create_checkable_actions(self.tool_bar_menu, toolbar_items)
 
@@ -67,6 +66,16 @@ class ViewMenu:
         # Display Item Submenu
         display_item_icon = IconService.get_icon('view-display-item')
         display_item_menu = view_menu.addMenu(display_item_icon, "Display Item")
+
+        # Select Mode Action (Default Tool)
+        select_mode_icon = IconService.get_icon('mouse-cursor')
+        self.select_mode_action = QAction(select_mode_icon, "Select", self.main_window)
+        self.select_mode_action.setCheckable(True)
+        self.select_mode_action.setChecked(True)
+        self.select_mode_action.setToolTip("Select Mode (Cursor)")
+        display_item_menu.addAction(self.select_mode_action)
+        display_item_menu.addSeparator()
+
         self.tag_action = QAction(IconService.get_icon('view-tag'), "Tag", self.main_window)
         self.tag_action.setCheckable(True)
         display_item_menu.addAction(self.tag_action)

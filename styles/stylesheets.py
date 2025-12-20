@@ -24,7 +24,11 @@ def get_tree_widget_stylesheet() -> str:
             border: 1px solid {c.BORDER_DARK};
         }}
         QTreeWidget::item:selected {{
-            background-color: {c.COLOR_SELECTED_ALT};
+            background-color: transparent;
+            color: {c.TEXT_PRIMARY};
+        }}
+        QTreeWidget::item:hover {{
+            background-color: {c.COLOR_HOVER};
             color: {c.TEXT_PRIMARY};
         }}
     """
@@ -64,7 +68,11 @@ def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: 
             min-height: 20px;
         }}
         QTreeWidget::item:selected {{
-            background-color: {c.COLOR_SELECTED_ALT};
+            background-color: transparent;
+            color: {c.TEXT_PRIMARY};
+        }}
+        QTreeWidget::item:hover {{
+            background-color: {c.COLOR_HOVER};
             color: {c.TEXT_PRIMARY};
         }}
 
@@ -163,6 +171,10 @@ def get_tool_button_stylesheet() -> str:
         QSS stylesheet string for tool buttons
     """
     return f"""
+        QToolButton {{
+            border-radius: 3px;
+            padding: 3px;
+        }}
         QToolButton[state="on"] {{
             background-color: {c.ACCENT_GREEN};
             color: {c.TEXT_PRIMARY};
@@ -172,6 +184,16 @@ def get_tool_button_stylesheet() -> str:
             background-color: {c.ACCENT_YELLOW};
             color: black;
             border: 1px solid {c.ACCENT_YELLOW_DARK};
+        }}
+        QToolButton:hover {{
+            background-color: {c.COLOR_HOVER};
+        }}
+        QToolButton:checked, QToolButton:pressed {{
+            background-color: #707070;
+            border: 1px solid {c.BORDER_LIGHT};
+        }}
+        QToolButton:checked:hover {{
+            background-color: #808080;
         }}
     """
 
@@ -212,7 +234,11 @@ def get_completer_popup_stylesheet() -> str:
             color: {c.TEXT_PRIMARY};
         }}
         QListWidget::item:selected {{
-            background-color: {c.COLOR_SELECTED_ALT};
+            background-color: transparent;
+            color: {c.TEXT_PRIMARY};
+        }}
+        QListWidget::item:hover {{
+            background-color: {c.COLOR_HOVER};
             color: {c.TEXT_PRIMARY};
         }}
     """
@@ -330,6 +356,76 @@ def get_normal_text_stylesheet() -> str:
 
 
 # ============================================================================
+# TOOLBAR STYLESHEET
+# ============================================================================
+
+def get_toolbar_stylesheet() -> str:
+    """
+    Generate stylesheet for toolbars.
+    
+    Returns:
+        QSS stylesheet string for toolbars
+    """
+    return f"""
+        QToolBar {{
+            background-color: {c.BG_DARK_SECONDARY};
+            border: 1px solid {c.BORDER_DARK};
+            spacing: 3px;
+            padding: 2px;
+        }}
+        QToolBar::separator {{
+            background-color: {c.BORDER_DARK};
+            width: 1px;
+            margin: 4px;
+        }}
+            QToolBar QSpinBox, QToolBar QComboBox {{
+            min-height: 24px;
+        }}
+    """
+
+
+# ============================================================================
+# MENU AND MENU BAR STYLESHEETS
+# ============================================================================
+
+def get_menu_stylesheet() -> str:
+    """
+    Generate stylesheet for menus and menu bars.
+    
+    Returns:
+        QSS stylesheet string for menus
+    """
+    return f"""
+        QMenuBar {{
+            background-color: {c.BG_DARK_SECONDARY};
+            color: {c.TEXT_PRIMARY};
+        }}
+        QMenuBar::item:selected {{
+            background-color: {c.COLOR_HOVER};
+        }}
+        QMenu {{
+            background-color: {c.BG_DARK_SECONDARY};
+            color: {c.TEXT_PRIMARY};
+            border: 1px solid {c.BORDER_DARK};
+        }}
+        QMenu::item:selected {{
+            background-color: {c.COLOR_HOVER};
+            color: {c.TEXT_PRIMARY};
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {c.BG_DARK_SECONDARY};
+            color: {c.TEXT_PRIMARY};
+            selection-background-color: {c.COLOR_HOVER};
+            selection-color: {c.TEXT_PRIMARY};
+            outline: none;
+        }}
+        QPushButton:hover {{
+            background-color: {c.COLOR_HOVER};
+        }}
+    """
+
+
+# ============================================================================
 # EXPORT ALL STYLESHEETS AS DICTIONARY
 # ============================================================================
 
@@ -345,4 +441,6 @@ STYLESHEETS = {
     "pattern_widget": get_pattern_widget_stylesheet,
     "error_text": get_error_text_stylesheet,
     "normal_text": get_normal_text_stylesheet,
+    "menu": get_menu_stylesheet,
+    "toolbar": get_toolbar_stylesheet,
 }
