@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#fFfFfF"><path d="M120-80q-17 0-28.5-11.5T80-120q0-17 11.5-28.5T120-160h720q17 0 28.5 11.5T880-120q0 17-11.5 28.5T840-80H120Zm220-160q-25 0-42.5-17.5T280-300v-520q0-25 17.5-42.5T340-880q25 0 42.5 17.5T400-820v520q0 25-17.5 42.5T340-240Zm280 0q-25 0-42.5-17.5T560-300v-280q0-25 17.5-42.5T620-640q25 0 42.5 17.5T680-580v280q0 25-17.5 42.5T620-240Z"/></svg>
+<svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="alignBottomGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <path clip-rule="evenodd" d="M6 3.5C4.61929 3.5 3.5 4.61929 3.5 6V14C3.5 15.3807 4.61929 16.5 6 16.5H8C9.38071 16.5 10.5 15.3807 10.5 14V6C10.5 4.61929 9.38071 3.5 8 3.5H6ZM16 7.5C14.6193 7.5 13.5 8.61929 13.5 10V14C13.5 15.3807 14.6193 16.5 16 16.5H18C19.3807 16.5 20.5 15.3807 20.5 14V10C20.5 8.61929 19.3807 7.5 18 7.5H16ZM4 19.5C3.72386 19.5 3.5 19.7239 3.5 20C3.5 20.2761 3.72386 20.5 4 20.5H20C20.2761 20.5 20.5 20.2761 20.5 20C20.5 19.7239 20.2761 19.5 20 19.5H4Z" fill="url(#alignBottomGradient)" fill-rule="evenodd" stroke="#A5D6A7" stroke-width="0.5"/>
+</svg>

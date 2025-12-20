@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><g fill="none"><path fill="#8fbffa" d="M2.5 0A1.5 1.5 0 0 0 1 1.5v11A1.5 1.5 0 0 0 2.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5a.5.5 0 0 0-.146-.354l-4.5-4.5A.5.5 0 0 0 8 0z"/><path fill="#2859c5" d="M13 5a.5.5 0 0 0-.146-.354l-4.5-4.5A.5.5 0 0 0 8 0v4.5a.5.5 0 0 0 .5.5z"/></g></svg>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="newGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#64B5F6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H14L21 10V19C21 20.1046 20.1046 21 19 21Z" fill="url(#newGradient)" stroke="#90CAF9" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M16 6V10H20" stroke="white" stroke-width="1.5" stroke-linejoin="round" opacity="0.7"/>
+    <line x1="12" y1="13" x2="12" y2="18" stroke="#FFD600" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="9.5" y1="15.5" x2="14.5" y2="15.5" stroke="#FFD600" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

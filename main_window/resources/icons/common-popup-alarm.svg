@@ -1,3 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<path fill="white" d="M3 6.25A3.25 3.25 0 0 1 6.25 3h11.5A3.25 3.25 0 0 1 21 6.25v11.5A3.25 3.25 0 0 1 17.75 21H6.25A3.25 3.25 0 0 1 3 17.75zM4.5 7h15v-.75a1.75 1.75 0 0 0-1.75-1.75H6.25A1.75 1.75 0 0 0 4.5 6.25zm15 1.5h-15v9.25c0 .966.784 1.75 1.75 1.75h11.5a1.75 1.75 0 0 0 1.75-1.75zM6.75 10a.75.75 0 0 0-.75.75v5c0 .414.336.75.75.75h5a.75.75 0 0 0 .75-.75v-5a.75.75 0 0 0-.75-.75zm.75 5v-3.5H11V15z" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="popupGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFD54F;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#F57C00;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="2" y="2" width="20" height="20" rx="2" fill="url(#popupGrad)" opacity="0.2"/>
+    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="url(#bellGrad)"/>
+    <rect x="14" y="14" width="8" height="8" rx="1" fill="url(#popupGrad)" stroke="white" stroke-width="1"/>
 </svg>

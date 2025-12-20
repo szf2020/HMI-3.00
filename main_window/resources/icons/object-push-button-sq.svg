@@ -1,21 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <defs>
-    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#9333ea;stop-opacity:1" />
-    </linearGradient>
-    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.2"/>
-    </filter>
-  </defs>
-
-  <path fill="#374151" 
-        d="M20 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2Z" 
-        filter="url(#dropShadow)"/>
-
-  <path fill="url(#screenGradient)" 
-        d="M20 18H4V6h16v12Z"/>
-  
-  <path fill="#e5e7eb" opacity="0.8"
-        d="M5 18v-2h14v2H5Z"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="sqButtonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="4" y="4" width="16" height="16" rx="2" fill="url(#sqButtonGrad)" stroke="#B3E5FC" stroke-width="1.5"/>
+    <rect x="6" y="6" width="12" height="12" rx="1" fill="rgb(255,255,255)" fill-opacity="0.2"/>
 </svg>

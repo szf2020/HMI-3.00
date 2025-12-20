@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 256 256"><g fill="#7afd88"><path d="M232 152a103.9 103.9 0 0 1-5.9 34.63a8 8 0 0 1-7.57 5.37H37.46a8.05 8.05 0 0 1-7.57-5.41a104 104 0 0 1-5.89-35.4C24.44 94 71.73 47.49 129 48a104 104 0 0 1 103 104" opacity="0.2"/><path d="m114.34 154.34l96-96a8 8 0 0 1 11.32 11.32l-96 96a8 8 0 0 1-11.32-11.32M128 88a63.9 63.9 0 0 1 20.44 3.33a8 8 0 1 0 5.11-15.16a80 80 0 0 0-105.06 84.71a8 8 0 0 0 7.94 7.12c.29 0 .59 0 .89-.05a8 8 0 0 0 7.07-8.83A65 65 0 0 1 64 152a64.07 64.07 0 0 1 64-64m99.74 13a8 8 0 0 0-14.24 7.3a96.27 96.27 0 0 1 5 75.71l-181.1-.07A96.24 96.24 0 0 1 128 56h.88a95 95 0 0 1 42.82 10.5a8 8 0 1 0 7.3-14.23A110.8 110.8 0 0 0 129 40h-1A112.05 112.05 0 0 0 22.35 189.25A16.07 16.07 0 0 0 37.46 200h181.07a16 16 0 0 0 15.11-10.71a112.35 112.35 0 0 0-5.9-88.3Z"/></g></svg>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="sectorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" fill="none" stroke="#E0F7FA" stroke-width="1"/>
+    <path d="M12 12L12 2a10 10 0 0 1 10 10H12z" fill="url(#sectorGrad)" stroke="white" stroke-width="0.5"/>
+    <circle cx="12" cy="12" r="2" fill="white" stroke="url(#sectorGrad)" stroke-width="1"/>
+</svg>

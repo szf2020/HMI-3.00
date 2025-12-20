@@ -1,33 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <linearGradient id="clockBodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#ef4444;" />
-            <stop offset="100%" style="stop-color:#dc2626;" />
+        <linearGradient id="userAlarmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#90CAF9;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="metalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#e5e7eb;" />
-            <stop offset="100%" style="stop-color:#9ca3af;" />
+        <linearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFD54F;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#F57C00;stop-opacity:1" />
         </linearGradient>
-        <filter id="clockShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.2"/>
-        </filter>
     </defs>
-
-    <g filter="url(#clockShadow)">
-        <path fill="url(#metalGradient)" 
-              d="M4.118 5.746a.734.734 0 0 0-1.006-.23L.7 7.926a.72.72 0 0 0 .232.996.734.734 0 0 0 1.006-.23l2.412-1.494a.72.72 0 0 0-.232-.996zm15.763 0a.72.72 0 0 0-.232.996l2.412 1.494a.734.734 0 0 0 1.006.23.72.72 0 0 0 .232-.996L20.887 5.516a.734.734 0 0 0-1.006.23z"
-              transform="translate(0, 11)"/>
-
-        <circle cx="12" cy="13.325" r="8.757" fill="url(#clockBodyGradient)"/>
-        
-        <g fill="url(#metalGradient)">
-            <path d="M8.24 2.34a.72.72 0 0 1-.232.996l-3.891 2.41a.734.734 0 0 1-1.006-.23a.72.72 0 0 1 .232-.996l3.892-2.41a.734.734 0 0 1 1.006.23z"/>
-            <path d="M15.76 2.34a.734.734 0 0 1 1.005-.23l3.892 2.41a.72.72 0 0 1 .232.996a.734.734 0 0 1-1.006.23l-3.891-2.41a.72.72 0 0 1-.233-.996z"/>
-        </g>
-        
-        <circle cx="12" cy="13.325" r="7" fill="#f9fafb"/>
-        
-        <path fill="#374151"
-              d="M12 8.747c.402 0 .729.324.729.723v3.556l2.219 2.198a.72.72 0 0 1 0 1.022a.734.734 0 0 1-1.032 0l-2.433-2.41a.72.72 0 0 1-.213-.51V9.47c0-.4.326-.723.73-.723z"/>
-    </g>
+    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="url(#bellGrad)"/>
+    <circle cx="12" cy="11" r="3" fill="url(#userAlarmGrad)" opacity="0.8"/>
+    <path d="M12 14c-2 0-4 1-4 2v1h8v-1c0-1-2-2-4-2z" fill="url(#userAlarmGrad)"/>
 </svg>

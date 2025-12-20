@@ -1,8 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-	<g fill="none" stroke="white" stroke-width="4">
-		<path fill="white" stroke-linecap="round" stroke-linejoin="round" d="M5 35a2 2 0 0 1 2-2h34a2 2 0 0 1 2 2v7H5z" />
-		<path stroke-linecap="round" stroke-linejoin="round" d="M42 18h-8l-6-6l6-6h8" />
-		<circle cx="8" cy="12" r="4" fill="currentColor" />
-		<path stroke-linecap="round" stroke-linejoin="round" d="M12 12h16m-18 4l8 17" />
-	</g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="robotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color: #90A4AE; stop-opacity: 1" />
+            <stop offset="100%" style="stop-color: #455A64; stop-opacity: 1" />
+        </linearGradient>
+    </defs>
+    <rect x="7" y="10" width="10" height="10" rx="2" fill="url(#robotGrad)"/>
+    <rect x="9" y="3.2" width="6" height="6" rx="2" fill="#78909c"/>
+    <circle cx="11" cy="6.5" r="1" fill="#72ff77"/>
+    <circle cx="13" cy="6.5" r="1" fill="#72ff77"/>
+    <path d="M 12 2 v 2 M 10 10 v -1 M 14 10 v -1" stroke="#455a64" stroke-width="1"/>
+    <rect x="9" y="13" width="6" height="4" fill="#263238"/>
+    <path d="M 5 12 l 2 2 M 19 12 l -2 2" stroke="#455a64" stroke-width="2" stroke-linecap="round"/>
 </svg>

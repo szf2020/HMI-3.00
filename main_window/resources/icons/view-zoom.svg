@@ -1,3 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<path fill="white" d="M14 3.072a8 8 0 0 1 2.617 11.424l4.944 4.943a1.5 1.5 0 0 1-2.008 2.225l-.114-.103l-4.943-4.944a8 8 0 0 1-12.49-6.332L2 10l.005-.285A8 8 0 0 1 14 3.072M10 6a1 1 0 0 0-.993.883L9 7v2H7l-.117.007a1 1 0 0 0 0 1.986L7 11h2v2l.007.117a1 1 0 0 0 1.986 0L11 13v-2h2l.117-.007a1 1 0 0 0 0-1.986L13 9h-2V7l-.007-.117A1 1 0 0 0 10 6" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="zoomGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <circle cx="9" cy="9" r="5.5" fill="none" stroke="url(#zoomGradient)" stroke-width="2"/>
+    <path d="M14 14L20 20" stroke="#FF6F00" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="9" y1="6" x2="9" y2="12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="6" y1="9" x2="12" y2="9" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

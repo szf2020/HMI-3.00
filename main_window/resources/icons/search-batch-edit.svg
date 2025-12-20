@@ -1,3 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-	<path fill="white" d="m17.421 4.992l-3.046 1.219l-7.5-3L8.7 2.48a3.5 3.5 0 0 1 2.6 0l5.757 2.303a1.5 1.5 0 0 1 .364.208m-7.42 2.969l3.028-1.212l-7.5-3l-2.586 1.035a1.5 1.5 0 0 0-.364.208zM2.034 5.852A1.5 1.5 0 0 0 2 6.176v7.646a1.5 1.5 0 0 0 .943 1.393L8.7 17.518q.178.07.36.122l.372-1.485q.03-.12.068-.236v-7.08zM18 6.176v2.957a2.87 2.87 0 0 0-2.898.707L10.5 14.442V8.838l7.465-2.986q.035.158.035.324m-7.02 9.2l4.83-4.829a1.87 1.87 0 1 1 2.644 2.645l-4.83 4.83a2.2 2.2 0 0 1-1.02.577l-1.498.375a.89.89 0 0 1-1.079-1.079l.375-1.498c.096-.386.296-.739.578-1.02" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="batchEditGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#29B6F6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path fill="url(#batchEditGradient)" stroke="#81D4FA" stroke-width="0.5" d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" />
+    <path fill="url(#batchEditGradient)" stroke="#81D4FA" stroke-width="0.5" d="M18.5 2.5L21.5 5.5L12.5 14.5H9.5V11.5L18.5 2.5Z" />
 </svg>

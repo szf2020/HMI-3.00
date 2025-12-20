@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <path fill="#94a3b8" d="M288 96H88a40 40 0 0 0-40 40v240a40 40 0 0 0 40 40h200a40 40 0 0 0 40-40v-40h-32v40a8 8 0 0 1-8 8H88a8 8 0 0 1-8-8V136a8 8 0 0 1 8-8h200a8 8 0 0 1 8 8v40h32v-40a40 40 0 0 0-40-40z"/>
-  <path fill="#ef4444" d="M456.5 233.5 368 145v64H192v96h176v64l88.5-88.5a32 32 0 0 0 0-45z"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="exitGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#C92A2A;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="3" y="4" width="7" height="16" rx="1" fill="rgb(100,181,246)" fill-opacity="0.3" stroke="#64B5F6" stroke-width="1.5"/>
+    <path d="M18 8L22 12M22 12L18 16" stroke="url(#exitGradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="22" y1="12" x2="11" y2="12" stroke="url(#exitGradient)" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

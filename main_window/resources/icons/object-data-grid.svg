@@ -1,20 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <filter id="dashboardShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
+        <linearGradient id="gridGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <g filter="url(#dashboardShadow)">
-        <rect x="2" y="2" width="20" height="20" rx="2" fill="#e5e7eb"/>
-        
-        <path fill="#4b5563" d="M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3H2V4z"/>
-
-        <g>
-            <rect x="4" y="9" width="7" height="5" rx="1" fill="#3b82f6"/>
-            <rect x="13" y="9" width="7" height="5" rx="1" fill="#22c55e"/>
-            <rect x="4" y="16" width="7" height="4" rx="1" fill="#a855f7"/>
-            <rect x="13" y="16" width="7" height="4" rx="1" fill="#f59e0b"/>
-        </g>
-    </g>
+    <rect x="3" y="3" width="18" height="18" rx="3" fill="url(#gridGrad)" stroke="#E0F7FA" stroke-width="1"/>
+    <rect x="3" y="3" width="18" height="5" rx="3" fill="white" fill-opacity="0.2"/>
+    <line x1="3" y1="8" x2="21" y2="8" stroke="white" stroke-width="1" opacity="0.5"/>
+    <line x1="3" y1="13" x2="21" y2="13" stroke="white" stroke-width="1" opacity="0.3"/>
+    <line x1="3" y1="18" x2="21" y2="18" stroke="white" stroke-width="1" opacity="0.3"/>
+    <line x1="9" y1="3" x2="9" y2="21" stroke="white" stroke-width="1" opacity="0.5"/>
+    <line x1="15" y1="3" x2="15" y2="21" stroke="white" stroke-width="1" opacity="0.3"/>
 </svg>

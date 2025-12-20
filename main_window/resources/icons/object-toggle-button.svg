@@ -1,24 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="onGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#4ade80;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#22c55e;stop-opacity:1" />
-    </linearGradient>
-    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#000" flood-opacity="0.2"/>
-    </filter>
-        <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feOffset dx="0" dy="4"/>
-      <feGaussianBlur stdDeviation="4" result="offset-blur"/>
-      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
-      <feFlood flood-color="#000" flood-opacity="0.2" result="color"/>
-      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
-      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
-    </filter>
-  </defs>
-
-  <path fill="url(#onGradient)" filter="url(#dropShadow)"
-        d="M368 112H144C64.6 112 0 176.6 0 256s64.6 144 144 144h224c79.4 0 144-64.6 144-144s-64.6-144-144-144Z" />
-
-  <circle cx="368" cy="256" r="112" fill="#FFFFFF" filter="url(#innerShadow)" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="toggleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="4" y="7" width="16" height="10" rx="5" fill="#E0E0E0" stroke="#BDBDBD" stroke-width="1"/>
+    <circle cx="15" cy="12" r="4" fill="url(#toggleGrad)" stroke="white" stroke-width="1.5"/>
 </svg>

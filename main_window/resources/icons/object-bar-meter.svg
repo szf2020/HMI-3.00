@@ -1,3 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
-	<path fill="white" d="M1280 128v1792H640V128z" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="barMeterGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="2" y="9" width="20" height="6" rx="3" fill="#EEEEEE" stroke="#E0E0E0" stroke-width="1"/>
+    <rect x="2" y="9" width="14" height="6" rx="3" fill="url(#barMeterGrad)"/>
+    <path d="M4 12h10" stroke="white" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
 </svg>

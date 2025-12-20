@@ -1,3 +1,14 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M5.75 2C5.33579 2 5 2.33579 5 2.75V21.25C5 21.6642 5.33579 22 5.75 22H8V11.75C8 11.3358 8.33579 11 8.75 11C9.16421 11 9.5 11.3358 9.5 11.75V22H18.25C18.6642 22 19 21.6642 19 21.25V2.75C19 2.33579 18.6642 2 18.25 2H5.75ZM9.5 5.75C9.5 6.16421 9.16421 6.5 8.75 6.5C8.33579 6.5 8 6.16421 8 5.75C8 5.33579 8.33579 5 8.75 5C9.16421 5 9.5 5.33579 9.5 5.75Z" fill="#ffffff"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="ctrlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#90A4AE;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#455A64;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="4" y="2" width="16" height="20" rx="2" fill="url(#ctrlGrad)"/>
+    <rect x="6" y="4" width="12" height="6" fill="#263238"/>
+    <rect x="7" y="5" width="2" height="1" fill="#4CAF50"/>
+    <rect x="10" y="5" width="2" height="1" fill="#FFC107"/>
+    <rect x="13" y="5" width="2" height="1" fill="#F44336"/>
+    <path d="M6 12h12M6 15h12M6 18h12" stroke="rgb(255,255,255)" stroke-opacity="0.3" stroke-width="1"/>
 </svg>

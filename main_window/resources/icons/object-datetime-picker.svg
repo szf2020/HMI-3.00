@@ -1,47 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern icon for a datetime-picker UI component.
-        It combines a calendar, a clock, and a pointer to clearly represent the action of selecting a date and time.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A vibrant green gradient for the primary action element (the clock) -->
-        <linearGradient id="clockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#22c55e;"/>
-            <stop offset="100%" style="stop-color:#16a34a;"/>
+        <linearGradient id="dateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#CE93D8;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#7B1FA2;stop-opacity:1" />
         </linearGradient>
-        <!-- A subtle shadow to give the icon a soft, layered 3D effect -->
-        <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
+        <linearGradient id="pickGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The main calendar page, with a clean fill and the shadow effect -->
-    <g filter="url(#dropShadow)">
-        <path fill="#f3f4f6" 
-              d="M5 5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5z"/>
-        
-        <!-- The header of the calendar, styled in a modern, dark gray -->
-        <path fill="#4b5563"
-              d="M5 5a2 2 0 0 0-2 2v2h18V7a2 2 0 0 0-2-2H5z"/>
-
-        <!-- Notches for binder rings on the header -->
-        <path fill="#1f2937"
-              d="M8 3h2v4H8V3zm6 0h2v4h-2V3z"/>
-    </g>
-          
-    <!-- The clock overlay, representing the "time" selection part -->
-    <g transform="translate(18, 18)">
-        <!-- Clock face with a vibrant green gradient to signify it's an interactive element -->
-        <circle r="5" fill="url(#clockGradient)" filter="url(#dropShadow)"/>
-        <!-- Clock hands, in a high-contrast white for readability -->
-        <path d="M0 -2.5 V 0 H 2" 
-              fill="none" 
-              stroke="#ffffff" 
-              stroke-width="1.2" 
-              stroke-linecap="round" 
-              stroke-linejoin="round"/>
-    </g>
+    <rect x="3" y="4" width="18" height="16" rx="2" fill="white" stroke="#E1BEE7" stroke-width="1"/>
+    <path d="M4 5h16v4H4z" fill="url(#dateGrad)"/>
+    <path d="M7 2v4M17 2v4" stroke="#7B1FA2" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="5" fill="url(#pickGrad)" stroke="white" stroke-width="1"/>
+    <path d="M14 16l1.5 1.5 3-3" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

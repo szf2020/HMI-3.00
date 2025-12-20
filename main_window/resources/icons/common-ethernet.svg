@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 48 48"><g fill="none" stroke-linecap="round" stroke-width="2.1"><rect width="36" height="36" x="6" y="6" fill="#2f88ff" stroke="#fff" stroke-linejoin="round" rx="3"/><rect width="10" height="6" x="19" y="27" fill="#43ccf8" stroke="#fff" stroke-linejoin="round"/><rect width="20" height="8" x="14" y="19" fill="#43ccf8" stroke="#fff" stroke-linejoin="round"/><path stroke="#fff" d="M33 19V15"/><path stroke="#fff" d="M27 19V15"/><path stroke="#fff" d="M21 19V15"/><path stroke="#fff" d="M15 19V15"/></g></svg>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="ethGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#90A4AE;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#455A64;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="4" y="6" width="16" height="12" rx="2" fill="url(#ethGrad)"/>
+    <rect x="7" y="10" width="10" height="8" fill="#CFD8DC"/>
+    <path d="M8 10v4M10 10v4M12 10v4M14 10v4M16 10v4" stroke="#455A64" stroke-width="1"/>
+</svg>

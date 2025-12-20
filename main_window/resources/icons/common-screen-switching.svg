@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 48 48"><path fill="#fff" d="M8.25 8A4.25 4.25 0 0 0 4 12.25v23.5A4.25 4.25 0 0 0 8.25 40h31.5A4.25 4.25 0 0 0 44 35.75v-23.5A4.25 4.25 0 0 0 39.75 8zM24 14.75c.331 0 .65.132.884.366l6 6a1.25 1.25 0 0 1-1.768 1.768l-3.866-3.866V31.75a1.25 1.25 0 1 1-2.5 0V19.018l-3.866 3.866a1.25 1.25 0 0 1-1.768-1.768l6-6A1.25 1.25 0 0 1 24 14.75"/></svg>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="2" y="4" width="14" height="10" rx="2" fill="url(#screenGrad)"/>
+    <rect x="8" y="10" width="14" height="10" rx="2" fill="#81C784"/>
+    <path d="M16 7l3 3-3 3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
-<path d="M320-240v-480h320v480H320Z" fill="#e3e3e3"/>
-<path d="M200-360v-240h80v-80h80v80h80v240h-80v80h-80v-80H200Z" fill="#4285f4"/>
-<path d="M600-360v-240h80v-80h80v80h80v240h-80v80h-80v-80H600Z" fill="#34a853"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="flipHorizGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FF8A65;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#E64A19;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M12 4V20" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M8 8L8 16L4 12L8 8Z" fill="url(#flipHorizGradient)"/>
+    <path d="M16 8L16 16L20 12L16 8Z" fill="url(#flipHorizGradient)" opacity="0.6"/>
 </svg>

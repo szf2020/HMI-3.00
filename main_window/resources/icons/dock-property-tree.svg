@@ -1,7 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<g fill="none" stroke="white" stroke-width="1.5">
-		<path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12.001 2.5c4.478 0 6.717 0 8.108 1.391S21.5 7.521 21.5 12c0 4.478 0 6.717-1.391 8.109c-1.391 1.39-3.63 1.39-8.109 1.39c-4.478 0-6.717 0-8.109-1.39c-1.39-1.392-1.39-3.63-1.39-8.11Z" />
-		<path stroke-linejoin="round" d="M2.5 8h19" />
-		<path stroke-linecap="round" stroke-linejoin="round" d="M11 17h6M7 17h1m3-4h6M7 13h1" />
-	</g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="propertyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#AB47BC;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#6A1B9A;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="2.5" y="2.5" width="19" height="19" rx="1" stroke="url(#propertyGradient)" stroke-width="1.5" fill="none"/>
+    <line x1="2.5" y1="8" x2="21.5" y2="8" stroke="url(#propertyGradient)" stroke-width="1.5" />
+    <rect x="6" y="11" width="3" height="3" rx="0.5" fill="#4CAF50"/>
+    <line x1="11" y1="13" x2="18" y2="13" stroke="#FFD600" stroke-width="1"/>
+    <line x1="11" y1="17" x2="18" y2="17" stroke="#FFD600" stroke-width="1"/>
 </svg>

@@ -1,25 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <linearGradient id="serverGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#9ca3af;"/>
-            <stop offset="100%" style="stop-color:#6b7280;"/>
+        <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
         </linearGradient>
-        <filter id="serverShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity="0.2"/>
-        </filter>
     </defs>
-
-    <g filter="url(#serverShadow)">
-        <g>
-            <rect x="0" y="64" width="512" height="160" rx="48" fill="url(#serverGradient)"/>
-            <rect x="320" y="128" width="128" height="32" rx="16" fill="#1f2937" opacity="0.5"/>
-            <circle cx="64" cy="144" r="12" fill="#22c55e"/>
-        </g>
-        
-        <g>
-            <rect x="0" y="288" width="512" height="160" rx="48" fill="url(#serverGradient)"/>
-            <rect x="192" y="352" width="256" height="32" rx="16" fill="#1f2937" opacity="0.5"/>
-            <circle cx="64" cy="368" r="12" fill="#3b82f6"/>
-        </g>
-    </g>
+    <rect x="2" y="9" width="20" height="6" rx="3" fill="#EEEEEE" stroke="#E0E0E0" stroke-width="1"/>
+    <rect x="2" y="9" width="12" height="6" rx="3" fill="url(#progressGrad)"/>
+    <path d="M4 12h8" stroke="white" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
 </svg>

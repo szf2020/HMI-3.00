@@ -1,33 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern, multicolor icon for "cascade" or "overlapping windows".
-    -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A vibrant gradient for the active window's header -->
-        <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#a855f7;"/>
-            <stop offset="100%" style="stop-color:#9333ea;"/>
+        <linearGradient id="tabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
         </linearGradient>
-        <!-- A subtle shadow to give the windows a layered, 3D effect -->
-        <filter id="windowShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
     </defs>
-
-    <!-- The entire group of windows, with the shadow applied -->
-    <g filter="url(#windowShadow)">
-        <!-- The background window, in a neutral gray -->
-        <rect x="3" y="6" width="14" height="14" rx="2" fill="#d1d5db"/>
-
-        <!-- The foreground (active) window -->
-        <g>
-            <!-- The body of the active window, in a clean off-white -->
-            <rect x="7" y="3" width="14" height="14" rx="2" fill="#f9fafb"/>
-            <!-- The header of the active window, with the vibrant gradient -->
-            <path fill="url(#headerGradient)" 
-                  d="M7 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3H7V5z"/>
-        </g>
-    </g>
+    <path d="M3 8c0-1.1.9-2 2-2h6l2 2h8c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V8z" fill="url(#tabGrad)" stroke="#E0F7FA" stroke-width="1"/>
+    <path d="M3 10h18" stroke="white" stroke-width="1" opacity="0.3"/>
+    <rect x="5" y="4" width="6" height="4" rx="1" fill="white" fill-opacity="0.2"/>
 </svg>

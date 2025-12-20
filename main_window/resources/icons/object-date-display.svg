@@ -1,26 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <linearGradient id="headerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#ef4444;"/>
-            <stop offset="100%" style="stop-color:#dc2626;"/>
+        <linearGradient id="dateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#CE93D8;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#7B1FA2;stop-opacity:1" />
         </linearGradient>
-        <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity="0.1"/>
-        </filter>
     </defs>
-
-    <path fill="#f9fafb" filter="url(#dropShadow)"
-          d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h560q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Z"/>
-
-    <path fill="url(#headerGradient)"
-          d="M200-640v-80h560v80H200Zm-80 560V-280h720v120q0 33-23.5 56.5T760-80H200q-33 0-56.5-23.5T120-160Z"/>
-    
-    <path fill="#be123c"
-          d="M240-880h80v80h-80v-80Zm320 0h80v80h-80v-80Z"/>
-          
-    <g fill="#9ca3af">
-        <path d="M320-400q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Z"/>
-        <path d="M480-400q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Z"/>
-        <path d="M640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400Z"/>
-    </g>
+    <rect x="3" y="4" width="18" height="16" rx="2" fill="white" stroke="#E1BEE7" stroke-width="1"/>
+    <path d="M4 5h16v4H4z" fill="url(#dateGrad)"/>
+    <path d="M7 2v4M17 2v4" stroke="#7B1FA2" stroke-width="2" stroke-linecap="round"/>
+    <rect x="6" y="10" width="2" height="2" rx="0.5" fill="#E1BEE7"/>
+    <rect x="11" y="10" width="2" height="2" rx="0.5" fill="#E1BEE7"/>
+    <rect x="16" y="10" width="2" height="2" rx="0.5" fill="#E1BEE7"/>
+    <rect x="6" y="14" width="2" height="2" rx="0.5" fill="#E1BEE7"/>
+    <rect x="11" y="14" width="2" height="2" rx="0.5" fill="#7B1FA2"/>
+    <rect x="16" y="14" width="2" height="2" rx="0.5" fill="#E1BEE7"/>
 </svg>

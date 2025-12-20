@@ -1,23 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <defs>
-    <linearGradient id="lightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#fef08a;" />
-      <stop offset="100%" style="stop-color:#facc15;" />
-    </linearGradient>
-    <linearGradient id="baseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#d1d5db;" />
-      <stop offset="100%" style="stop-color:#9ca3af;" />
-    </linearGradient>
-    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.2"/>
-    </filter>
-  </defs>
-
-  <g filter="url(#dropShadow)">
-    <path fill="url(#lightGradient)" 
-          d="M14.228 16.846c.137.42.59.654.995.476a8 8 0 1 0-6.367.034c.406.174.857-.064.99-.486l.087-.278c.132-.421-.106-.866-.506-1.052a6.109 6.109 0 1 1 5.206-.028c-.399.19-.632.637-.495 1.058z" />
-    
-    <path fill="url(#baseGradient)" fill-rule="evenodd"
-          d="M9 21a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2h-4a1 1 0 0 1-1-1m0-5.575a1 1 0 0 1 1 1v.398c0 .374.303.677.677.677h2.646a.677.677 0 0 0 .677-.677V16.5a1 1 0 1 1 2 0v.323a2.676 2.676 0 0 1-2.677 2.677h-2.646A2.676 2.676 0 0 1 8 16.823v-.398a1 1 0 0 1 1-1" clip-rule="evenodd" />
-  </g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bitLampGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFF176;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#FBC02D;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" fill="url(#bitLampGrad)" stroke="#FFF9C4" stroke-width="1"/>
+    <circle cx="12" cy="12" r="7" fill="rgb(255,255,255)" fill-opacity="0.3"/>
+    <path d="M12 5a7 7 0 0 0-7 7" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
 </svg>

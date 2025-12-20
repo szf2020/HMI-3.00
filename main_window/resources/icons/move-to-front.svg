@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<g fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-		<rect width="8" height="8" x="8" y="8" rx="2" />
-		<path d="M4 10a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2m4 16a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2" />
-	</g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="moveToFrontGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#AB47BC;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#6A1B9A;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="6" y="6" width="16" height="12" rx="2" fill="url(#moveToFrontGradient)" opacity="0.5" stroke="#CE93D8" stroke-width="1"/>
+    <rect x="2" y="2" width="16" height="12" rx="2" fill="url(#moveToFrontGradient)" stroke="#CE93D8" stroke-width="1.5"/>
+    <line x1="10" y1="18" x2="10" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <polyline points="8 20 10 22 12 20" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

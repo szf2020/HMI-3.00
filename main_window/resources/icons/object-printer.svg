@@ -1,45 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern, multicolor icon for a printer or printing function.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A subtle shadow to give the printer a modern, layered appearance -->
-        <filter id="printerShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
+        <linearGradient id="printGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#BDBDBD;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#616161;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The entire printer, with the shadow applied for depth -->
-    <g filter="url(#printerShadow)">
-
-        <!-- The main body of the printer -->
-        <path d="M19 8H5a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-6a3 3 0 0 0-3-3z" 
-              fill="#e5e7eb"/>
-        
-        <!-- The top section/paper tray cover -->
-        <path d="M5 10a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v1H5v-1z"
-              fill="#d1d5db"/>
-
-        <!-- The paper loaded in the top tray -->
-        <rect x="7" y="3" width="10" height="6" rx="1" fill="#ffffff"/>
-
-        <!-- The output tray -->
-        <path d="M18 16H6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1z"
-              fill="#4b5563"/>
-        
-        <!-- The paper coming out of the printer -->
-        <g>
-            <path d="M6 14h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3z" fill="#ffffff"/>
-            <!-- Placeholder text lines on the printed paper -->
-            <rect x="8" y="15" width="8" height="1" rx=".5" fill="#d1d5db"/>
-            <rect x="8" y="17" width="5" height="1" rx=".5" fill="#d1d5db"/>
-        </g>
-
-        <!-- A green status light indicating the printer is on -->
-        <circle cx="19" cy="13" r="1" fill="#22c55e"/>
-
-    </g>
+    <path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 14H8v-4h8v4zm2-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="url(#printGrad)" stroke="#F5F5F5" stroke-width="0.5"/>
 </svg>

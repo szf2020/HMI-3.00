@@ -1,52 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern icon for a spin box (number stepper/incrementer) UI component.
-        This icon features a clean design with a numerical display and interactive stepper buttons.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A subtle drop shadow to give the component a sense of depth and lift it off the background -->
-        <filter id="spinboxShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.1"/>
-        </filter>
+        <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- A group for the entire spin box, allowing the shadow to be applied to all elements at once -->
-    <g filter="url(#spinboxShadow)">
-
-        <!-- Main body of the input field, with a clean, light fill -->
-        <path d="M4 7C4 5.89543 4.89543 5 6 5H15V19H6C4.89543 19 4 18.1046 4 17V7Z" 
-              fill="#f9fafb" 
-              stroke="#d1d5db" 
-              stroke-width="1.5"/>
-
-        <!-- The up/down button container, slightly darker to differentiate it -->
-        <path d="M15 5H18C19.1046 5 20 5.89543 20 7V17C20 18.1046 19.1046 19 18 19H15V5Z" 
-              fill="#f3f4f6" 
-              stroke="#d1d5db" 
-              stroke-width="1.5"/>
-        
-        <!-- Divider line between the up and down buttons -->
-        <line x1="15" y1="12" x2="20" y2="12" 
-              stroke="#d1d5db" 
-              stroke-width="1.5"/>
-
-        <!-- The up and down chevron arrows, in a vibrant blue to indicate they are interactive -->
-        <g fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <!-- Up arrow -->
-            <path d="M16 10L17.5 8.5L19 10"/>
-            <!-- Down arrow -->
-            <path d="M16 14L17.5 15.5L19 14"/>
-        </g>
-        
-        <!-- A sample number display inside the field to clearly show its purpose -->
-        <text x="9.5" y="14" 
-              font-family="sans-serif" 
-              font-size="6px" 
-              font-weight="bold" 
-              fill="#1f2937" 
-              text-anchor="middle">123</text>
-    </g>
+    <rect x="2" y="7" width="20" height="10" rx="2" fill="url(#spinGrad)" stroke="#B3E5FC" stroke-width="1"/>
+    <rect x="16" y="7" width="6" height="10" rx="2" fill="rgb(0,0,0)" fill-opacity="0.1"/>
+    <path d="M18 11l1-1 1 1M18 13l1 1 1-1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="4" y="9" width="10" height="6" rx="1" fill="rgb(255,255,255)" fill-opacity="0.2"/>
 </svg>

@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
-<path d="M120-200v-80h80v-80H80q-17 0-28.5-11.5T40-400v-320q0-17 11.5-28.5T80-760h800q17 0 28.5 11.5T920-720v320q0 17-11.5 28.5T880-360h-120v80h80v80H120Zm40-160h680v-320H160v320Zm0 0v-320 320Z" fill="#e3e3e3"/>
-<path d="M200-400v-80h80v80h-80Zm120 0v-80h80v80h-80Zm120 0v-80h80v80h-80Zm120 0v-80h80v80h-80Zm120 0v-80h80v80h-80Z" fill="#4285f4"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="deviceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#90A4AE;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#455A64;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="3" y="4" width="12" height="16" rx="2" fill="url(#deviceGrad)"/>
+    <rect x="16" y="10" width="5" height="10" rx="2" fill="#78909C"/>
+    <path d="M5 7h8M5 10h8M5 13h8" stroke="white" stroke-width="1" opacity="0.5"/>
+    <circle cx="18.5" cy="13" r="1" fill="white" opacity="0.8"/>
 </svg>

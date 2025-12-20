@@ -1,25 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <linearGradient id="eyeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#f59e0b;" />
-            <stop offset="100%" style="stop-color:#ef4444;" />
+        <linearGradient id="viewBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
         </linearGradient>
-        <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
     </defs>
-
-    <g filter="url(#dropShadow)">
-        <path fill="#f9fafb" 
-              d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
-        <path fill="#e5e7eb"
-              d="M3 4v3h18V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/>
-        <rect x="5" y="5" width="8" height="1" rx=".5" fill="#d1d5db"/>
-    </g>
-    
-    <g>
-        <path fill="url(#eyeGradient)"
-              d="M23 18c-.94 2.34-3.27 4-6 4s-5.06-1.66-6-4c.94-2.34 3.27-4 6-4s5.06 1.66 6 4z"/>
-        <circle cx="17" cy="18" r="2.5" fill="#1f2937"/>
-    </g>
+    <rect x="3" y="3" width="18" height="18" rx="3" fill="url(#viewBoxGrad)" stroke="#E0F7FA" stroke-width="1"/>
+    <rect x="6" y="6" width="12" height="12" rx="1" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1" stroke-dasharray="2 1"/>
 </svg>

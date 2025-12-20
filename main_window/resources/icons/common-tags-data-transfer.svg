@@ -1,3 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<path fill="white" d="M8 4a2 2 0 0 0-2 2v4h2V6h8v3h-2.5l3.5 3.5L20.5 9H18V6a2 2 0 0 0-2-2zm-5 8v2h8v-2zm0 3v2h8v-2zm10 0v2h8v-2zM3 18v2h8v-2zm10 0v2h8v-2z" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="tagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#90CAF9;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="transferGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" fill="url(#tagGrad)"/>
+    <path d="M15 15l3-3-3-3v2H9v2h6v2z" fill="url(#transferGrad)" stroke="white" stroke-width="0.5"/>
 </svg>

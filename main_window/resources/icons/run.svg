@@ -1,14 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
-  <defs>
-    <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#34d399;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="playGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <path fill="url(#circleGradient)" d="m479.49-84q-81.4 0-153.42-31.44-72.02-31.44-125.65-85.05-53.63-53.61-85.09-125.73Q84-398.33 84-479.93q0-82.11 31.5-154.36 31.5-72.24 85.4-126.15 53.89-53.9 125.65-84.73Q398.3-876 479.49-876q82.17 0 154.72 30.82 72.55 30.81 126.24 84.71 53.68 53.89 84.62 126.27Q876-561.82 876-479.53q0 81.68-30.82 153.2-30.81 71.51-84.69 125.41-53.89 53.89-126.25 85.41Q561.88-84 479.61-84Z"/>
-  <path fill="url(#playGradient)" d="m427.08-339 185.3-118.77q11.23-7.39 11.23-22.12t-11.23-22.34L427.08-622q-14-8.61-27.93-.24-13.92 8.37-13.92 23.47v237.54q0 15.1 13.92 23.47 13.93 8.37 27.93-1.24Z"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="runGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" fill="url(#runGradient)" stroke="#A5D6A7" stroke-width="1.5"/>
+    <path d="M10 9L10 15L16 12L10 9Z" fill="white" stroke="white" stroke-width="0.5" stroke-linejoin="round"/>
+    <circle cx="12" cy="12" r="8" fill="none" stroke="rgb(255,255,255)" stroke-opacity="0.3" stroke-width="1"/>
 </svg>

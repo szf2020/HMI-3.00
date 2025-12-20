@@ -1,3 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-	<path fill="white" d="M5 12v2h11V9H5v2H3V7h9V2H0v5h2v5z" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="treeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M4 4v16h16" fill="none" stroke="url(#treeGrad)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M4 8h6M4 14h10M4 20h4" stroke="url(#treeGrad)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="10" cy="8" r="2" fill="url(#treeGrad)"/>
+    <circle cx="14" cy="14" r="2" fill="url(#treeGrad)"/>
+    <circle cx="8" cy="20" r="2" fill="url(#treeGrad)"/>
 </svg>

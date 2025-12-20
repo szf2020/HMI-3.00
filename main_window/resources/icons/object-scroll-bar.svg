@@ -1,23 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern, minimalist icon for a vertical scroll bar.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A subtle shadow for a modern, 3D effect -->
-        <filter id="scrollShadow" x="-20%" y="-10%" width="140%" height="120%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
+        <linearGradient id="scrollGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The entire scroll bar component, with shadow applied -->
-    <g filter="url(#scrollShadow)">
-        <!-- The scroll bar track -->
-        <rect x="10" y="2" width="4" height="20" rx="2" fill="#e5e7eb"/>
-        
-        <!-- The scroll bar thumb (the part you drag), in a darker, high-contrast gray -->
-        <rect x="9" y="6" width="6" height="8" rx="3" fill="#9ca3af"/>
-    </g>
+    <rect x="18" y="2" width="4" height="20" rx="2" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+    <rect x="18" y="6" width="4" height="8" rx="2" fill="url(#scrollGrad)"/>
+    <path d="M20 4l1 1.5h-2L20 4zM20 20l1-1.5h-2L20 20z" fill="#9E9E9E"/>
 </svg>

@@ -1,3 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<path fill="white" d="M10 4V1l4 4l-4 4V6a6 6 0 0 0-6 6l.08 1H2.06L2 12a8 8 0 0 1 8-8m7-2h3a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2M4 15h9v7H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="rotateRGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFB74D;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#FF8A00;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M7.17 6.17C8.65 4.69 10.72 3.75 13 3.75C16.97 3.75 20.25 7.03 20.25 11C20.25 14.97 16.97 18.25 13 18.25C9.85 18.25 7.12 16.2 6.16 13.5H8.18C8.98 15.09 10.83 16.25 13 16.25C15.89 16.25 18.25 13.89 18.25 11C18.25 8.11 15.89 5.75 13 5.75C11.41 5.75 9.96 6.41 8.95 7.42L12 10.47H5V3.47L7.17 6.17Z" fill="url(#rotateRGradient)" stroke="#FFCC80" stroke-width="0.5"/>
 </svg>

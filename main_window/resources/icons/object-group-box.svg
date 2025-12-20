@@ -1,48 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern, "neumorphic" style icon for a Group Box UI component.
-        Features soft shadows and a 3D effect for a clean, tangible appearance.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A filter to create the soft, neumorphic shadow and highlight effect -->
-        <filter id="neumorphicShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <!-- Dark shadow for the bottom-right -->
-            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#a3a3a3" flood-opacity="0.6"/>
-            <!-- Light highlight for the top-left -->
-            <feDropShadow dx="-1" dy="-1" stdDeviation="1" flood-color="#ffffff" flood-opacity="0.8"/>
-        </filter>
-        <!-- A filter for the inset (pressed) look of the content area -->
-                <filter id="insetShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feOffset dx="0.5" dy="0.5"/>
-            <feGaussianBlur stdDeviation="1" result="offset-blur"/>
-            <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
-            <feFlood flood-color="#000" flood-opacity="0.15" result="color"/>
-            <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
-            <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
-        </filter>
+        <linearGradient id="groupGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The main background of the icon -->
-    <rect width="24" height="24" fill="#e5e7eb" rx="4"/>
-    
-    <!-- The Group Box container with the neumorphic effect -->
-    <g filter="url(#neumorphicShadow)">
-        <rect x="3" y="5" width="18" height="16" rx="2" fill="#e5e7eb"/>
-    </g>
-
-    <!-- The title/legend area that "breaks" the top border -->
-    <g>
-        <rect x="7" y="4" width="10" height="2" fill="#e5e7eb"/>
-        <rect x="8" y="4.75" width="8" height="0.5" fill="#9ca3af" rx=".25"/>
-    </g>
-
-    <!-- Placeholder content inside the box, with an inset shadow -->
-    <g filter="url(#insetShadow)">
-        <rect x="6" y="9" width="12" height="8" rx="1" fill="#d1d5db" opacity="0.5"/>
-        <circle cx="10" cy="13" r="1.5" fill="#3b82f6"/>
-    </g>
+    <rect x="3" y="5" width="18" height="16" rx="3" stroke="url(#groupGrad)" stroke-width="1.5" fill="none"/>
+    <rect x="6" y="2" width="8" height="6" rx="1" fill="url(#groupGrad)"/>
+    <path d="M8 4h4" stroke="white" stroke-width="1" stroke-linecap="round"/>
 </svg>
-

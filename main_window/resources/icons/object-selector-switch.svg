@@ -1,44 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-    <!-- Define gradients and filters for a modern, 3D look -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A subtle gradient for the main body to give it a metallic sheen -->
-        <radialGradient id="baseGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#4B5563;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#1F2937;stop-opacity:1" />
-        </radialGradient>
-        <!-- Gradient for the central knob -->
-        <radialGradient id="knobGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#F9FAFB;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#D1D5DB;stop-opacity:1" />
-        </radialGradient>
-        <!-- A simple drop shadow filter for depth -->
-        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-            <feOffset dx="2" dy="2"/>
-            <feMerge>
-                <feMergeNode/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        </filter>
+        <linearGradient id="switchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#9E9E9E;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#424242;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="knobGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- Main body of the selector switch -->
-    <circle cx="64" cy="64" r="60" fill="url(#baseGradient)" filter="url(#dropShadow)"/>
-
-    <!-- Position markers around the switch -->
-    <g stroke="#9CA3AF" stroke-width="3" stroke-linecap="round">
-        <path d="M64,12 L64,20" transform="rotate(-60, 64, 64)"/>
-        <path d="M64,12 L64,20" transform="rotate(-30, 64, 64)"/>
-        <path d="M64,12 L64,20" transform="rotate(0, 64, 64)"/>
-        <path d="M64,12 L64,20" transform="rotate(30, 64, 64)"/>
-        <path d="M64,12 L64,20" transform="rotate(60, 64, 64)"/>
-    </g>
-    
-    <!-- Central rotating knob -->
-    <circle cx="64" cy="64" r="32" fill="url(#knobGradient)"/>
-    <circle cx="64" cy="64" r="28" fill="#374151" stroke="#1F2937" stroke-width="2"/>
-
-    <!-- Pointer/Indicator on the knob, pointing to the middle position -->
-    <path d="M64,44 L64,36" stroke="#3B82F6" stroke-width="6" stroke-linecap="round"/>
-
+    <circle cx="12" cy="12" r="10" fill="url(#switchGrad)" stroke="#BDBDBD" stroke-width="1"/>
+    <path d="M12 4v2M20 12h-2M12 20v-2M4 12h2" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <rect x="11" y="6" width="2" height="8" rx="1" fill="url(#knobGrad)" transform="rotate(45 12 12)" stroke="white" stroke-width="0.5"/>
 </svg>

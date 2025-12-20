@@ -1,41 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 14, 2025
-        Description: A modern, multicolor icon for a pie chart, data analytics, or report.
-    -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- Gradients for each of the pie chart segments -->
-        <linearGradient id="blueSlice" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#3b82f6;" />
-            <stop offset="100%" style="stop-color:#60a5fa;" />
+        <linearGradient id="pieGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="purpleSlice" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#a855f7;" />
-            <stop offset="100%" style="stop-color:#c084fc;" />
+        <linearGradient id="pieGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#AED581;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#689F38;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="yellowSlice" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#f59e0b;" />
-            <stop offset="100%" style="stop-color:#facc15;" />
-        </linearGradient>
-        <!-- A subtle shadow to give the chart a modern, layered appearance -->
-        <filter id="pieShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
     </defs>
-
-    <!-- The entire pie chart, with the shadow applied for depth -->
-    <g filter="url(#pieShadow)">
-        <!-- The left half (50% slice) -->
-        <path fill="url(#blueSlice)" 
-              d="M11 2v20c-5.1-.5-9-4.8-9-10s3.9-9.5 9-10z"/>
-        
-        <!-- The top-right quarter (25% slice) -->
-        <path fill="url(#yellowSlice)" 
-              d="M13 2v9h9c-.5-4.8-4.2-8.5-9-9z"/>
-        
-        <!-- The bottom-right quarter (25% slice) -->
-        <path fill="url(#purpleSlice)" 
-              d="M13 13v9c4.7-.5 8.5-4.2 9-9h-9z"/>
-    </g>
+    <path d="M12 12L12 2A10 10 0 0 1 22 12L12 12Z" fill="url(#pieGrad1)" stroke="white" stroke-width="1"/>
+    <path d="M12 12L2 12A10 10 0 0 1 12 2L12 12Z" fill="url(#pieGrad2)" stroke="white" stroke-width="1"/>
+    <path d="M12 12L22 12A10 10 0 0 1 12 22L12 12Z" fill="#4CAF50" stroke="white" stroke-width="1" opacity="0.6"/>
 </svg>

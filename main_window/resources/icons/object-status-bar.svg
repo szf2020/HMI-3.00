@@ -1,41 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A simple, minimalist icon for a Status Bar, 
-                     representing the top bar of a modern mobile device.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A subtle shadow to give the bar a modern, layered appearance -->
-        <filter id="simpleBarShadow" x="-10%" y="-10%" width="120%" height="180%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.1"/>
-        </filter>
+        <linearGradient id="statusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DD0E1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00838F;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The main status bar shape, with a notch cut out from the top edge -->
-    <path filter="url(#simpleBarShadow)" fill="#374151"
-          d="M 6 7 
-             C 4.895 7, 4 7.895, 4 9 
-             L 4 15 
-             C 4 16.105, 4.895 17, 6 17 
-             L 18 17 
-             C 19.105 17, 20 16.105, 20 15 
-             L 20 9 
-             C 20 7.895, 19.105 7, 18 7 
-             L 15 7 
-             C 14.448 7, 14 6.552, 14 6 
-             L 10 6 
-             C 10 6.552, 9.552 7, 9 7 
-             Z"/>
-    
-    <!-- Simple, high-contrast status indicators for context -->
-    <g fill="#e5e7eb">
-        <!-- Time on the left -->
-        <text x="7" y="13.5" font-family="sans-serif" font-size="2.5px" font-weight="bold" text-anchor="middle">8:09</text>
-        <!-- Minimalist battery icon on the right -->
-        <rect x="17" y="10.5" width="2" height="3" rx="0.5"/>
-        <rect x="19" y="11.25" width="0.5" height="1.5" rx="0.25"/>
-    </g>
+    <rect x="2" y="18" width="20" height="4" rx="1" fill="url(#statusGrad)" stroke="#E0F7FA" stroke-width="1"/>
+    <circle cx="5" cy="20" r="1" fill="white" opacity="0.8"/>
+    <line x1="8" y1="20" x2="14" y2="20" stroke="white" stroke-width="1" opacity="0.6"/>
 </svg>
-

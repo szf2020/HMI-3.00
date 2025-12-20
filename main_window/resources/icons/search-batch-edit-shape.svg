@@ -1,3 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-	<path fill="white" d="M18 18h-6v-5.79c-.66.61-1.53.99-2.5.99c-2.04 0-3.7-1.66-3.7-3.7a3.7 3.7 0 0 1 3.7-3.7c2.04 0 3.7 1.66 3.7 3.7c0 .97-.38 1.84-.99 2.5H18m1-9H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2" />
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="batchShapeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4DB6AC;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00796B;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+	<path fill="url(#batchShapeGradient)" stroke="#80CBC4" stroke-width="0.5" d="M18 18h-6v-5.79c-.66.61-1.53.99-2.5.99c-2.04 0-3.7-1.66-3.7-3.7a3.7 3.7 0 0 1 3.7-3.7c2.04 0 3.7 1.66 3.7 3.7c0 .97-.38 1.84-.99 2.5H18m1-9H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2" />
 </svg>

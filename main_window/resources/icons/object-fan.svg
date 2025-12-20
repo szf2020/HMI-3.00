@@ -1,51 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern, minimalist, and animated icon for a fan, ventilation, or cooling system.
-    -->
-    <style>
-        .fan-blades {
-            /* Defines the center point for the rotation */
-            transform-origin: center;
-            /* Applies the spinning animation */
-            animation: spin 4s linear infinite;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
-    
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A gradient for the blades to give them a subtle, plastic-like sheen -->
-        <linearGradient id="bladeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#9ca3af;"/>
-            <stop offset="100%" style="stop-color:#e5e7eb;"/>
+        <linearGradient id="fanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
         </linearGradient>
-        <!-- A subtle shadow to give the icon a layered, 3D effect -->
-        <filter id="fanShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0.5" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
     </defs>
-
-    <!-- The group containing the animated fan blades, with the shadow applied -->
-    <g class="fan-blades" filter="url(#fanShadow)">
-        <!-- Master Blade Path -->
-        <path id="blade" 
-              d="M12 2 C 12 2, 18 6, 17 11 C 16 16, 12 12, 12 12 Z" 
-              fill="url(#bladeGradient)"/>
-        
-        <!-- Re-use the master blade, rotating it into position for a symmetrical design -->
-        <use href="#blade" transform="rotate(120, 12, 12)"/>
-        <use href="#blade" transform="rotate(240, 12, 12)"/>
-    </g>
-
-    <!-- The central hub of the fan, in a dark, high-contrast color -->
-    <circle cx="12" cy="12" r="2.5" fill="#4b5563"/>
+    <circle cx="12" cy="12" r="10" fill="none" stroke="url(#fanGrad)" stroke-width="1" stroke-dasharray="2 2"/>
+    <path d="M12 12c0-4 3-6 3-6s-6 0-6 6 3 6 3 6 6 0 6-6-3-6-3-6" fill="url(#fanGrad)" opacity="0.8"/>
+    <circle cx="12" cy="12" r="2" fill="white" stroke="url(#fanGrad)" stroke-width="1"/>
 </svg>

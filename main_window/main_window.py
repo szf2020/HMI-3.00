@@ -143,8 +143,8 @@ class MainWindow(QMainWindow):
         mouse_widget, self.mouse_pos_label = create_status_widget('mouse-cursor', "0, 0", 100)
         screen_size_widget, self.screen_size_label = create_status_widget('view-screen', "0 x 0", 120)
         zoom_widget, self.zoom_label = create_status_widget('view-zoom', "100%", 80)
-        obj_pos_widget, self.object_pos_label = create_status_widget('view-transform-line', "X: 0, Y: 0", 120)
-        obj_size_widget, self.object_size_label = create_status_widget('view-transform-line', "W: 0, H: 0", 120)
+        obj_pos_widget, self.object_pos_label = create_status_widget('object-pos', "X: 0, Y: 0", 120)
+        obj_size_widget, self.object_size_label = create_status_widget('object-size', "W: 0, H: 0", 120)
 
         self.statusBar().addPermanentWidget(mouse_widget)
         self.statusBar().addPermanentWidget(screen_size_widget)

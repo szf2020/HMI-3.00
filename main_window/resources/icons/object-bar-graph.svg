@@ -1,36 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 14, 2025
-        Description: A modern, multicolor icon for a bar chart, analytics, or statistics.
-    -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- Gradients for each of the bars to give them a glossy, 3D look -->
-        <linearGradient id="blueBar" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#60a5fa;" />
-            <stop offset="100%" style="stop-color:#2563eb;" />
+        <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#81C784;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="greenBar" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#4ade80;" />
-            <stop offset="100%" style="stop-color:#16a34a;" />
-        </linearGradient>
-        <linearGradient id="yellowBar" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#facc15;" />
-            <stop offset="100%" style="stop-color:#f59e0b;" />
-        </linearGradient>
-        <!-- A subtle shadow to give the chart a modern, layered appearance -->
-        <filter id="barShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
     </defs>
-
-    <!-- The entire chart, with the shadow applied for depth -->
-    <g filter="url(#barShadow)">
-        <!-- The short bar on the left -->
-        <rect x="2" y="13" width="4" height="10" rx="1" fill="url(#blueBar)"/>
-        <!-- The tall bar in the center -->
-        <rect x="10" y="1" width="4" height="22" rx="1" fill="url(#yellowBar)"/>
-        <!-- The medium bar on the right -->
-        <rect x="18" y="9" width="4" height="14" rx="1" fill="url(#greenBar)"/>
-    </g>
+    <path d="M3 3v15h18" fill="none" stroke="#BDBDBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="5" y="10" width="3" height="8" rx="1" fill="url(#barGrad)"/>
+    <rect x="10" y="6" width="3" height="12" rx="1" fill="url(#barGrad)"/>
+    <rect x="15" y="12" width="3" height="6" rx="1" fill="url(#barGrad)"/>
+    <rect x="20" y="4" width="3" height="14" rx="1" fill="url(#barGrad)"/>
 </svg>

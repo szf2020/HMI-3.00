@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <path fill="#e0e7ff" d="M15 3l5.5 5.5v9.324A3.176 3.176 0 0117.324 21H6.676A3.176 3.176 0 013.5 17.824V6.176A3.176 3.176 0 016.676 3H15z"/>
-  <path fill="#c7d2fe" d="M14.5 3.5L20 9h-5.5V3.5z"/>
-  <path fill="#4f46e5" d="M7.75 3v2.647c0 .878.716 1.594 1.594 1.594h5.312c.878 0 1.594-.716 1.594-1.594V3h-8.5z"/>
-  <path fill="#34d399" d="M16.25 21v-4.765a1.59 1.59 0 00-1.594-1.588H9.344a1.59 1.59 0 00-1.594 1.588V21h8.5z"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="saveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <path d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16L21 8V19C21 20.1046 20.1046 21 19 21Z" fill="url(#saveGradient)" stroke="#A5D6A7" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="5" y="3" width="11" height="6" fill="rgb(255,255,255)" fill-opacity="0.2" stroke="white" stroke-width="1"/>
+    <path d="M8 15L12 19L16 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="12" y1="15" x2="12" y2="20" stroke="white" stroke-width="2" stroke-linecap="round"/>
 </svg>

@@ -1,31 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: An icon for adding comments to documents or text.
-    -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <filter id="wordCommentShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.1"/>
-        </filter>
+        <linearGradient id="commentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFD54F;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#FF8F00;stop-opacity:1" />
+        </linearGradient>
     </defs>
-    
-    <!-- The document background with text lines -->
-    <g filter="url(#wordCommentShadow)" fill="#e5e7eb">
-        <rect x="4" y="3" width="16" height="18" rx="2"/>
-        <path stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" d="M8 8h8M8 12h8M8 16h4"/>
-    </g>
-    
-    <!-- The "add comment" speech bubble overlay -->
-    <g transform="translate(13, 13)">
-        <path d="M0 0h5a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H3L0 9V2a2 2 0 0 1 2-2z" 
-              fill="#a855f7" 
-              transform="translate(-1, -8)"/>
-        <!-- Plus symbol to signify 'add' -->
-        <path d="M-0.5 -5.5 H2.5 M1 -6.5 V -4.5" 
-              fill="none" 
-              stroke="#ffffff" 
-              stroke-width="1.2" 
-              stroke-linecap="round"/>
-    </g>
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z" fill="url(#commentGrad)" stroke="#FFF8E1" stroke-width="1"/>
+    <text x="12" y="13" font-family="Arial" font-weight="bold" font-size="10" fill="white" text-anchor="middle">W</text>
 </svg>

@@ -1,46 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern icon for a tower light (stack light/signal tower), 
-                     commonly used for industrial status indication.
-    -->
-
-    <defs>
-        <!-- A filter to create a soft, colored glow around the lights -->
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        </filter>
-
-        <!-- Gradients to give the lights a rounded, glowing appearance -->
-        <radialGradient id="redLight" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#f87171;" />
-            <stop offset="100%" style="stop-color:#ef4444;" />
-        </radialGradient>
-        <radialGradient id="yellowLight" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#fde047;" />
-            <stop offset="100%" style="stop-color:#facc15;" />
-        </radialGradient>
-        <radialGradient id="greenLight" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#4ade80;" />
-            <stop offset="100%" style="stop-color:#22c55e;" />
-        </radialGradient>
-    </defs>
-
-    <!-- The central pole of the tower light -->
-    <rect x="11" y="4" width="2" height="18" rx="1" fill="#4b5563"/>
-
-    <!-- The stack of lights, with the glow filter applied -->
-    <g filter="url(#glow)">
-        <!-- Green light (Go / Normal) -->
-        <rect x="8" y="16" width="8" height="4" rx="2" fill="url(#greenLight)"/>
-        <!-- Yellow light (Warning / Standby) -->
-        <rect x="8" y="10" width="8" height="4" rx="2" fill="url(#yellowLight)"/>
-        <!-- Red light (Stop / Error) -->
-        <rect x="8" y="4" width="8" height="4" rx="2" fill="url(#redLight)"/>
-    </g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <rect x="11" y="2" width="2" height="20" fill="#9E9E9E"/>
+    <rect x="8" y="4" width="8" height="4" rx="1" fill="#EF5350" stroke="#B71C1C" stroke-width="0.5"/>
+    <rect x="8" y="9" width="8" height="4" rx="1" fill="#FFCA28" stroke="#F57F17" stroke-width="0.5"/>
+    <rect x="8" y="14" width="8" height="4" rx="1" fill="#66BB6A" stroke="#1B5E20" stroke-width="0.5"/>
+    <rect x="7" y="19" width="10" height="2" rx="1" fill="#616161"/>
 </svg>

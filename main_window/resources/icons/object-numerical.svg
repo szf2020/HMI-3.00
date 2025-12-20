@@ -1,36 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <defs>
-    <!-- A subtle shadow to give the keypad a tangible, 3D feel -->
-    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.2"/>
-    </filter>
-  </defs>
-
-  <!-- The main frame of the keypad, in a modern, dark slate gray -->
-  <rect x="4" y="2" width="16" height="20" rx="2" fill="#374151" filter="url(#dropShadow)"/>
-
-  <!-- The screen or display area at the top -->
-  <rect x="6" y="4" width="12" height="4" rx="1" fill="#111827" opacity="0.5"/>
-
-  <!-- The grid of keys, styled in a light gray for high contrast -->
-  <g fill="#e5e7eb">
-    <rect x="6" y="10" width="3" height="3" rx=".5"/>
-    <rect x="10.5" y="10" width="3" height="3" rx=".5"/>
-    <rect x="15" y="10" width="3" height="3" rx=".5"/>
-    
-    <rect x="6" y="14.5" width="3" height="3" rx=".5"/>
-    <rect x="10.5" y="14.5" width="3" height="3" rx=".5"/>
-    <rect x="15" y="14.5" width="3" height="3" rx=".5"/>
-  </g>
-
-  <!-- The numbers, styled in a vibrant blue for clarity and visual interest -->
-  <g fill="#3b82f6" text-anchor="middle" font-family="sans-serif" font-size="2px" font-weight="bold">
-    <text x="7.5" y="12.2">1</text>
-    <text x="12" y="12.2">2</text>
-    <text x="16.5" y="12.2">3</text>
-    
-    <text x="7.5" y="16.7">4</text>
-    <text x="12" y="16.7">5</text>
-    <text x="16.5" y="16.7">6</text>
-  </g>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="numGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect x="2" y="6" width="20" height="12" rx="2" fill="url(#numGrad)" stroke="#B3E5FC" stroke-width="1"/>
+    <rect x="4" y="8" width="16" height="8" rx="1" fill="rgb(0,0,0)" fill-opacity="0.2"/>
+    <path d="M7 10h1v4H7zM9 10h3v1H9v1h2v1H9v1h3v-4zM13 10h3v4h-3v-4zm1 1v2h1v-2h-1z" fill="white"/>
 </svg>

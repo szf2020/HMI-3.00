@@ -1,56 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <!-- 
-        Author: Gemini
-        Date: September 13, 2025
-        Description: A modern icon representing a date and time display, 
-                     featuring a calendar page with a clock overlay.
-    -->
-
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <!-- A vibrant gradient for the calendar header -->
-        <linearGradient id="headerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#3b82f6;"/>
-            <stop offset="100%" style="stop-color:#2563eb;"/>
+        <linearGradient id="dateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#CE93D8;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#7B1FA2;stop-opacity:1" />
         </linearGradient>
-        <!-- A subtle shadow to give the icon a soft, layered look -->
-        <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.15"/>
-        </filter>
+        <linearGradient id="clockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+        </linearGradient>
     </defs>
-
-    <!-- The main calendar page, with a clean off-white fill and shadow -->
-    <g filter="url(#dropShadow)">
-        <path fill="#f9fafb" 
-              d="M5 5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5z"/>
-        
-        <!-- The header of the calendar, styled with the blue gradient -->
-        <path fill="url(#headerGradient)"
-              d="M5 5a2 2 0 0 0-2 2v2h18V7a2 2 0 0 0-2-2H5z"/>
-
-        <!-- Notches for binder rings on the header -->
-        <path fill="#1e40af"
-              d="M8 3h2v4H8V3zm6 0h2v4h-2V3z"/>
-    </g>
-          
-    <!-- The large number representing the day of the month -->
-    <text x="12" y="16.5" 
-          font-family="sans-serif" 
-          font-size="7px" 
-          font-weight="bold" 
-          fill="#374151" 
-          text-anchor="middle">13</text>
-    
-    <!-- The clock overlay element -->
-    <g transform="translate(17.5 17.5)">
-        <!-- Clock face with a border, matching the header -->
-        <circle r="4.5" fill="#f9fafb" stroke="#2563eb" stroke-width="1.5"/>
-        <!-- Clock hands showing 7:30 -->
-        <path d="M0 -2 L0 0 L-1.5 0" 
-              fill="none" 
-              stroke="#374151" 
-              stroke-width="1" 
-              stroke-linecap="round" 
-              stroke-linejoin="round"
-              transform="rotate(225)"/>
-    </g>
+    <rect x="2" y="4" width="14" height="14" rx="2" fill="white" stroke="#E1BEE7" stroke-width="1"/>
+    <path d="M3 5h12v4H3z" fill="url(#dateGrad)"/>
+    <circle cx="16" cy="16" r="6" fill="url(#clockGrad)" stroke="white" stroke-width="1.5"/>
+    <path d="M16 14v2l1.5 1.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

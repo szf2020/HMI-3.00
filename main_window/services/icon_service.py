@@ -101,6 +101,8 @@ class IconService:
         "view-tag": "view-tag.svg",
         "view-object-id": "view-object-id.svg",
         "view-transform-line": "view-transform-line.svg",
+        "object-pos": "object-pos.svg",
+        "object-size": "object-size.svg",
         "view-click-area": "view-click-area.svg",
         "view-object-snap": "view-object-snap.svg",
         "view-zoom": "view-zoom.svg",
