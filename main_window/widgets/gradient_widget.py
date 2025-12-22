@@ -93,10 +93,10 @@ class GradientPreviewWidget(QWidget):
         painter.fillRect(rect, QBrush(gradient))
         
         if self.is_selected:
-            pen = QPen(QColor("#0078D7"), 2)
+            pen = QPen(QColor(colors.COLOR_FOCUS_HIGHLIGHT), 2)
             painter.setPen(pen)
         else:
-            painter.setPen(QColor("#555555"))
+            painter.setPen(QColor(colors.BORDER_MEDIUM))
             
         painter.drawRect(rect.adjusted(1, 1, -1, -1))
 

@@ -77,7 +77,7 @@ class PatternPreviewWidget(QWidget):
         painter.fillRect(self.rect(), brush)
 
         if self.is_selected:
-            pen = QPen(QColor("#0078D7"), 2)
+            pen = QPen(QColor(colors.COLOR_FOCUS_HIGHLIGHT), 2)
             painter.setPen(pen)
         else:
             painter.setPen(QColor("grey"))

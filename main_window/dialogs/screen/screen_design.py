@@ -9,6 +9,7 @@ from PySide6.QtGui import (
     QColor, QPixmap, QIcon, QPainter, QLinearGradient, QBrush
 )
 from PySide6.QtCore import Qt, QEvent, QPointF, QSize
+from styles import colors
 
 # Import the refactored widgets
 from ...widgets.color_selector import ColorSelector
@@ -109,18 +110,18 @@ class ScreenDesignDialog(QDialog):
             QPushButton {{
                 background-color: {color.name()};
                 color: {text_color};
-                border: 1px solid #555555;
+                border: 1px solid {colors.BORDER_MEDIUM};
                 border-radius: 4px;
                 text-align: center;
                 padding: 5px;
             }}
             QPushButton:hover {{
-                background-color: #505050;
+                background-color: {colors.COLOR_HOVER};
                 border: 2px solid transparent;
                 border: 2px solid transparent;
                 border: 2px solid transparent;
             }}
-        """)
+        """ )
 
     def _open_color_selector_dialog(self):
         color = ColorSelector.getColor(self.selected_color, self)
@@ -164,11 +165,11 @@ class ScreenDesignDialog(QDialog):
         self.gradient_preview_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: qlineargradient({gradient_stops}, stop: 0 {color1_hex}, stop: 1 {color2_hex});
-                border: 1px solid #555555;
+                border: 1px solid {colors.BORDER_MEDIUM};
                 border-radius: 4px;
             }}
             QPushButton:hover {{
-                border: 2px solid #5B9BD5;
+                border: 2px solid {colors.COLOR_HOVER_FOCUS};
             }}
         """)
 
@@ -229,15 +230,15 @@ class ScreenDesignDialog(QDialog):
         self.pattern_preview_button.setIcon(QIcon(icon_pixmap))
         self.pattern_preview_button.setIconSize(icon_pixmap.size())
         
-        self.pattern_preview_button.setStyleSheet("""
-            QPushButton {
-                border: 1px solid #555555;
+        self.pattern_preview_button.setStyleSheet(f"""
+            QPushButton {{
+                border: 1px solid {colors.BORDER_MEDIUM};
                 border-radius: 4px;
-            }
-            QPushButton:hover {
-                border: 2px solid #5B9BD5;
-            }
-        """)
+            }}
+            QPushButton:hover {{
+                border: 2px solid {colors.COLOR_HOVER_FOCUS};
+            }}
+        """ )
 
     def _open_pattern_selector_dialog(self):
         dialog = QDialog(self)

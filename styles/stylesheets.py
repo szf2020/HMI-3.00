@@ -10,82 +10,52 @@ from styles import colors as c
 # TREE WIDGET STYLESHEETS
 # ============================================================================
 
-def get_tree_widget_stylesheet() -> str:
+def get_tree_widget_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "", 
+                               vline_path: str = "", branch_more_path: str = "", 
+                               branch_end_path: str = "") -> str:
     """
-    Generate stylesheet for tree widgets used in docking windows.
+    Generate unified stylesheet for tree widgets with optional advanced branch styling.
     
+    This consolidated function replaces both get_tree_widget_stylesheet() and 
+    get_project_tree_stylesheet() to eliminate double styling issues.
+    
+    Args:
+        expand_icon_path: Path to expand icon (plus/add icon) - optional for branch lines
+        collapse_icon_path: Path to collapse icon (minus/subtract icon) - optional for branch lines
+        vline_path: Path to vertical line SVG - optional for branch lines
+        branch_more_path: Path to T-junction branch SVG - optional for branch lines
+        branch_end_path: Path to L-corner branch SVG - optional for branch lines
+        
     Returns:
         QSS stylesheet string for tree widgets
     """
-    return f"""
-        QTreeWidget {{
-            background-color: {c.BG_DARK_PRIMARY};
-            color: {c.TEXT_PRIMARY};
-            border: 1px solid {c.BORDER_DARK};
-        }}
-        QTreeWidget::item:selected {{
-            background-color: transparent;
-            color: {c.TEXT_PRIMARY};
-        }}
-        QTreeWidget::item:hover {{
-            background-color: {c.COLOR_HOVER};
-            color: {c.TEXT_PRIMARY};
-        }}
-    """
-
-
-def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "", 
-                                  vline_path: str = "", branch_more_path: str = "", 
-                                  branch_end_path: str = "") -> str:
-    """
-    Generate advanced stylesheet for project tree widgets with branch lines.
-    
-    Args:
-        expand_icon_path: Path to expand icon (plus/add icon)
-        collapse_icon_path: Path to collapse icon (minus/subtract icon)
-        vline_path: Path to vertical line SVG
-        branch_more_path: Path to T-junction branch SVG
-        branch_end_path: Path to L-corner branch SVG
-        
-    Returns:
-        QSS stylesheet string for advanced tree widgets with hierarchy lines
-    """
-    return f"""
+    # Base stylesheet with widget-level selection styling to avoid double styling
+    base_stylesheet = f"""
         QTreeWidget {{
             border: none;
             background-color: {c.BG_DARK_SECONDARY};
-            alternate-background-color: {c.BG_DARK_SECONDARY};
             color: {c.TEXT_PRIMARY};
-            gridline-color: {c.BG_DARK_SECONDARY};
             outline: none;
-            margin-left: 0px;
-            show-decoration-selected: 1;
+            show-decoration-selected: 0;
+            selection-background-color: {c.COLOR_HOVER};
         }}
         QTreeWidget::item {{
             padding: 4px 2px;
-            margin-left: 0px;
-            color: {c.TEXT_PRIMARY};
             min-height: 20px;
         }}
-        QTreeWidget::item:selected {{
-            background-color: transparent;
-            color: {c.TEXT_PRIMARY};
-        }}
-        QTreeWidget::item:hover {{
-            background-color: {c.COLOR_HOVER};
-            color: {c.TEXT_PRIMARY};
-        }}
-
-        
+    """
+    
+    # Add branch styling only if icon paths are provided
+    branch_stylesheet = ""
+    if expand_icon_path and collapse_icon_path:
+        branch_stylesheet = f"""
         /* Default branch styling */
         QTreeWidget::branch {{
             width: 12px;
             height: 12px;
             padding-top: 7px;
-            padding-left: 0px;
             padding-right: 2px;
             padding-bottom: 7px;
-            background-color: transparent;
         }}
         
         /* Branch with expand button (collapsed with children) */
@@ -130,6 +100,22 @@ def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: 
             border: 1px solid {c.BORDER_HEADER};
         }}
     """
+    
+    return base_stylesheet + branch_stylesheet
+
+
+# Legacy function name for backward compatibility
+def get_project_tree_stylesheet(expand_icon_path: str = "", collapse_icon_path: str = "", 
+                                vline_path: str = "", branch_more_path: str = "", 
+                                branch_end_path: str = "") -> str:
+    """
+    Legacy function - redirects to get_tree_widget_stylesheet for backward compatibility.
+    
+    DEPRECATED: Use get_tree_widget_stylesheet() instead.
+    This function is kept only to maintain backward compatibility with existing code.
+    """
+    return get_tree_widget_stylesheet(expand_icon_path, collapse_icon_path, 
+                                      vline_path, branch_more_path, branch_end_path)
 
 
 # ============================================================================
@@ -151,7 +137,7 @@ def get_status_bar_stylesheet() -> str:
         QStatusBar::item {{
             border: none;
         }}
-        QLabel {{
+        QStatusBar QLabel {{
             color: {c.TEXT_PRIMARY};
             padding-left: 2px;
             padding-right: 2px;
@@ -228,18 +214,13 @@ def get_completer_popup_stylesheet() -> str:
     return f"""
         QListWidget {{
             background-color: {c.BG_SPREADSHEET};
+            color: {c.TEXT_PRIMARY};
             border: 1px solid {c.BORDER_MEDIUM};
+            show-decoration-selected: 0;
+            selection-background-color: transparent;
         }}
-        QListWidget::item {{
-            color: {c.TEXT_PRIMARY};
-        }}
-        QListWidget::item:selected {{
-            background-color: transparent;
-            color: {c.TEXT_PRIMARY};
-        }}
-        QListWidget::item:hover {{
+        QListWidget::item:selected, QListWidget::item:hover {{
             background-color: {c.COLOR_HOVER};
-            color: {c.TEXT_PRIMARY};
         }}
     """
 
@@ -378,7 +359,7 @@ def get_toolbar_stylesheet() -> str:
             width: 1px;
             margin: 4px;
         }}
-            QToolBar QSpinBox, QToolBar QComboBox {{
+        QToolBar QSpinBox, QToolBar QComboBox {{
             min-height: 24px;
         }}
     """
@@ -400,7 +381,7 @@ def get_menu_stylesheet() -> str:
             background-color: {c.BG_DARK_SECONDARY};
             color: {c.TEXT_PRIMARY};
         }}
-        QMenuBar::item:selected {{
+        QMenuBar::item:selected, QMenu::item:selected {{
             background-color: {c.COLOR_HOVER};
         }}
         QMenu {{
@@ -408,19 +389,12 @@ def get_menu_stylesheet() -> str:
             color: {c.TEXT_PRIMARY};
             border: 1px solid {c.BORDER_DARK};
         }}
-        QMenu::item:selected {{
-            background-color: {c.COLOR_HOVER};
-            color: {c.TEXT_PRIMARY};
-        }}
         QComboBox QAbstractItemView {{
             background-color: {c.BG_DARK_SECONDARY};
             color: {c.TEXT_PRIMARY};
             selection-background-color: {c.COLOR_HOVER};
             selection-color: {c.TEXT_PRIMARY};
             outline: none;
-        }}
-        QPushButton:hover {{
-            background-color: {c.COLOR_HOVER};
         }}
     """
 
@@ -431,7 +405,7 @@ def get_menu_stylesheet() -> str:
 
 STYLESHEETS = {
     "tree_widget": get_tree_widget_stylesheet,
-    "project_tree": get_project_tree_stylesheet,
+    "project_tree": get_tree_widget_stylesheet,  # Now uses unified function
     "status_bar": get_status_bar_stylesheet,
     "tool_button": get_tool_button_stylesheet,
     "formula_hint": get_formula_hint_stylesheet,

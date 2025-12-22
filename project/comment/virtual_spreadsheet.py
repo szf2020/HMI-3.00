@@ -398,7 +398,7 @@ class VirtualSpreadsheet(QAbstractScrollArea):
             painter.drawLine(x + self.cell_width, 0, x + self.cell_width, self.header_height)
             
             col_label = col_int_to_str(col)
-            painter.setPen(QPen(QColor(200, 200, 200)))
+            painter.setPen(QPen(QColor(colors.COLOR_HEADER_TEXT)))
             painter.drawText(x + 5, 0, self.cell_width - 10, self.header_height, 
                            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter, col_label)
             painter.setPen(QPen(QColor(colors.BORDER_MEDIUM)))

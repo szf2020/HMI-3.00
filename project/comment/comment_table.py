@@ -285,7 +285,6 @@ class Spreadsheet(QTableWidget):
                 color: {colors.TEXT_PRIMARY};
                 gridline-color: {colors.GRID_LINE};
                 selection-background-color: transparent;
-                selection-color: {colors.TEXT_PRIMARY};
                 border: none;
             }}
             QTableWidget::item {{
@@ -1116,19 +1115,19 @@ class Spreadsheet(QTableWidget):
                     if index != current_index:
                         rect = self.visualRect(index)
                         # Use a light green for selected cells (Excel style)
-                        painter.fillRect(rect, QColor(34, 139, 34, 40))
+                        painter.fillRect(rect, QColor(colors.COLOR_SELECTION_FILL).lighter(150))
         selection_rect = self.visualRegionForSelection(selection).boundingRect()
         # Draw a solid green border around the selection
-        painter.setPen(QPen(QColor(34, 139, 34), 2))
+        painter.setPen(QPen(QColor(colors.COLOR_SELECTION_FILL), 2))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(selection_rect.adjusted(0, 0, -1, -1))
         handle_rect = self.get_fill_handle_rect()
         if handle_rect:
-            painter.setBrush(QBrush(QColor(34, 139, 34)))
+            painter.setBrush(QBrush(QColor(colors.COLOR_SELECTION_FILL)))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(handle_rect)
         if self._is_dragging_fill_handle and self._drag_fill_rect:
-            painter.setPen(QPen(QColor(105, 105, 105), 1, Qt.PenStyle.DashLine))
+            painter.setPen(QPen(QColor(colors.BORDER_DARK), 1, Qt.PenStyle.DashLine))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRect(self._drag_fill_rect)
 

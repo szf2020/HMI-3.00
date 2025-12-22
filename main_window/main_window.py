@@ -392,6 +392,18 @@ class MainWindow(QMainWindow):
                 return screen_id
         return None
 
+    def _disconnect_screen_from_layers_dock(self, screen_widget):
+        """Disconnects a screen widget's signals from the layers dock to prevent stale connections."""
+        layers_dock = self.dock_factory.get_dock("layers")
+        if layers_dock and isinstance(screen_widget, CanvasBaseScreen):
+            try:
+                screen_widget.graphics_item_added.disconnect(layers_dock.add_canvas_object)
+                screen_widget.graphics_item_removed.disconnect(layers_dock.remove_canvas_object)
+                screen_widget.canvas_selection_changed.disconnect(layers_dock.sync_canvas_selection)
+            except RuntimeError:
+                # Signals may already be disconnected
+                pass
+
     def close_tab(self, index):
         """Closes a screen or comment tab."""
         widget = self.central_widget.widget(index)
@@ -401,6 +413,8 @@ class MainWindow(QMainWindow):
         # Check if it's a screen
         screen_id_to_remove = self.get_screen_id_for_widget(widget)
         if screen_id_to_remove is not None:
+            # Disconnect layers dock signals to prevent stale connections
+            self._disconnect_screen_from_layers_dock(widget)
             del self.open_screens[screen_id_to_remove]
             self.central_widget.removeTab(index)
             return
@@ -800,6 +814,9 @@ class MainWindow(QMainWindow):
         """
         menu_bar = self.menuBar()
         
+        # Apply custom styling to menu bar and menus
+        menu_bar.setStyleSheet(stylesheets.get_menu_stylesheet())
+        
         # Instantiate each menu class to build the menu bar
         self.file_menu = FileMenu(self, menu_bar)
         self.edit_menu = EditMenu(self, menu_bar)
@@ -842,6 +859,8 @@ class MainWindow(QMainWindow):
         for name, toolbar in self.toolbars.items():
             # Set a unique object name for each toolbar so its state can be saved.
             toolbar.setObjectName(f"{name.lower().replace(' ', '_')}_toolbar")
+            # Apply custom styling to toolbar
+            toolbar.setStyleSheet(stylesheets.get_toolbar_stylesheet())
             self.addToolBar(toolbar)
             toolbar.setIconSize(self.iconSize())
             
@@ -850,7 +869,6 @@ class MainWindow(QMainWindow):
         self.dock_factory = DockWidgetFactory(self)
         self.dock_factory.create_all_docks()
         self.project_tree = self.dock_factory.get_dock("project_tree")
-        self.project_tree.comment_service = self.comment_service
 
 
         # DOCKING SETUP

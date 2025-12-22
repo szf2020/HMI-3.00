@@ -618,9 +618,21 @@ class LayersDock(QDockWidget):
             self.opacity_spinbox.blockSignals(False)
     
     def _delete_selected(self):
-        """Delete selected layers."""
+        """Delete selected layers and their corresponding canvas objects."""
         selected = self.tree_widget.selectedItems()
         for item in selected:
+            # Get and delete the canvas object first
+            canvas_obj = self.item_to_object_map.get(id(item))
+            if canvas_obj and self.current_canvas:
+                # Remove from mappings
+                obj_id = id(canvas_obj)
+                if obj_id in self.object_to_item_map:
+                    del self.object_to_item_map[obj_id]
+                if id(item) in self.item_to_object_map:
+                    del self.item_to_object_map[id(item)]
+                # Delete from canvas
+                self.current_canvas.delete_graphic_object(canvas_obj)
+            
             self.layerDeleted.emit(item)
             parent = item.parent()
             if parent:
@@ -631,11 +643,20 @@ class LayersDock(QDockWidget):
                     self.tree_widget.takeTopLevelItem(index)
     
     def _duplicate_selected(self):
-        """Duplicate selected layers."""
+        """Duplicate selected layers and their corresponding canvas objects."""
         selected = self.tree_widget.selectedItems()
         for item in selected:
-            self._duplicate_item(item)
-            self.layerDuplicated.emit(item)
+            # Get and duplicate the canvas object
+            canvas_obj = self.item_to_object_map.get(id(item))
+            if canvas_obj and self.current_canvas:
+                # Duplicate on canvas - this will emit graphics_item_added which adds to layers
+                new_obj = self.current_canvas.duplicate_graphic_object(canvas_obj)
+                if new_obj:
+                    self.layerDuplicated.emit(item)
+            else:
+                # No canvas object, just duplicate the tree item
+                self._duplicate_item(item)
+                self.layerDuplicated.emit(item)
     
     def _duplicate_item(self, item):
         """Duplicate a single item."""

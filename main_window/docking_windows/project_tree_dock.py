@@ -1,6 +1,8 @@
 # main_window\docking_windows\project_tree_dock.py
 import copy
-from PySide6.QtWidgets import QDockWidget, QTreeWidgetItem, QMenu, QDialog, QMessageBox
+import json
+import csv
+from PySide6.QtWidgets import QDockWidget, QTreeWidgetItem, QMenu, QDialog, QMessageBox, QFileDialog
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence
 from ..widgets.tree import CustomTreeWidget
@@ -488,21 +490,209 @@ class ProjectTreeDock(QDockWidget):
         print("Paste Tag action triggered.")
 
     def import_tags(self):
-        # Placeholder for future implementation
-        print("Import Tags action triggered.")
+        """Import tags from a JSON or CSV file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import Tags", "", 
+            "Tag Files (*.json *.csv);;JSON Files (*.json);;CSV Files (*.csv);;All Files (*)"
+        )
+        if not file_path:
+            return
+        
+        try:
+            if file_path.endswith('.json'):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    imported_data = json.load(f)
+                    if isinstance(imported_data, list):
+                        tags_list = imported_data
+                    elif isinstance(imported_data, dict) and 'tags' in imported_data:
+                        tags_list = imported_data['tags']
+                    else:
+                        tags_list = [imported_data]
+            elif file_path.endswith('.csv'):
+                tags_list = []
+                with open(file_path, 'r', encoding='utf-8', newline='') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        # Convert number to int if present
+                        if 'number' in row:
+                            row['number'] = int(row['number'])
+                        tags_list.append(row)
+            else:
+                QMessageBox.warning(self, "Import Error", "Unsupported file format.")
+                return
+            
+            existing_numbers = self.get_existing_tag_numbers()
+            imported_count = 0
+            
+            for tag_data in tags_list:
+                # Skip if number already exists, or assign new number
+                if 'number' not in tag_data or tag_data['number'] in existing_numbers:
+                    tag_data['number'] = max(existing_numbers + [0]) + 1
+                
+                existing_numbers.append(tag_data['number'])
+                
+                # Ensure required fields
+                if 'name' not in tag_data:
+                    tag_data['name'] = f"Tag_{tag_data['number']}"
+                
+                # Save to Project Service
+                if 'tag_lists' not in self.main_window.project_service.project_data:
+                    self.main_window.project_service.project_data['tag_lists'] = {}
+                
+                self.main_window.project_service.project_data['tag_lists'][str(tag_data['number'])] = tag_data
+                
+                # Add item to tree
+                tag_text = f"{tag_data['number']} - {tag_data['name']}"
+                new_item = QTreeWidgetItem(self.tag_item, [tag_text])
+                new_item.setData(0, Qt.ItemDataRole.UserRole, tag_data)
+                new_item.setIcon(0, IconService.get_icon('common-tags'))
+                imported_count += 1
+            
+            self.tag_item.setExpanded(True)
+            self.main_window.project_modified()
+            QMessageBox.information(self, "Import Complete", f"Successfully imported {imported_count} tag(s).")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Import Error", f"Failed to import tags: {str(e)}")
 
     def export_tags(self):
-        # Placeholder for future implementation
-        print("Export Tags action triggered.")
+        """Export tags to a JSON or CSV file."""
+        file_path, selected_filter = QFileDialog.getSaveFileName(
+            self, "Export Tags", "", 
+            "JSON Files (*.json);;CSV Files (*.csv);;All Files (*)"
+        )
+        if not file_path:
+            return
+        
+        try:
+            # Collect all tags
+            tags_list = []
+            for i in range(self.tag_item.childCount()):
+                child = self.tag_item.child(i)
+                tag_data = child.data(0, Qt.ItemDataRole.UserRole)
+                if tag_data:
+                    tags_list.append(tag_data)
+            
+            if not tags_list:
+                QMessageBox.warning(self, "Export Error", "No tags to export.")
+                return
+            
+            if file_path.endswith('.csv') or 'CSV' in selected_filter:
+                if not file_path.endswith('.csv'):
+                    file_path += '.csv'
+                # Get all unique keys for CSV header
+                all_keys = set()
+                for tag in tags_list:
+                    all_keys.update(tag.keys())
+                all_keys = sorted(list(all_keys))
+                
+                with open(file_path, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=all_keys)
+                    writer.writeheader()
+                    writer.writerows(tags_list)
+            else:
+                if not file_path.endswith('.json'):
+                    file_path += '.json'
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump({'tags': tags_list}, f, indent=2, ensure_ascii=False)
+            
+            QMessageBox.information(self, "Export Complete", f"Successfully exported {len(tags_list)} tag(s).")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Export Error", f"Failed to export tags: {str(e)}")
 
     def paste_comment(self):
         # Placeholder for future implementation
         print("Paste Comment action triggered.")
 
     def import_comments(self):
-        # Placeholder for future implementation
-        print("Import Comments action triggered.")
+        """Import comments from a JSON file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import Comments", "", 
+            "JSON Files (*.json);;All Files (*)"
+        )
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                imported_data = json.load(f)
+                if isinstance(imported_data, list):
+                    comments_list = imported_data
+                elif isinstance(imported_data, dict) and 'comments' in imported_data:
+                    comments_list = imported_data['comments']
+                else:
+                    comments_list = [imported_data]
+            
+            existing_numbers = self.get_existing_comment_numbers()
+            imported_count = 0
+            
+            for comment_data in comments_list:
+                # Skip if number already exists, or assign new number
+                if 'number' not in comment_data or comment_data['number'] in existing_numbers:
+                    comment_data['number'] = max(existing_numbers + [0]) + 1
+                
+                existing_numbers.append(comment_data['number'])
+                
+                # Ensure required fields
+                if 'name' not in comment_data:
+                    comment_data['name'] = f"Comment_{comment_data['number']}"
+                
+                # Add to comment service
+                self.comment_service.add_comment(comment_data)
+                
+                # If table_data was included, update it
+                if 'table_data' in comment_data:
+                    self.comment_service.update_table_data(comment_data['number'], comment_data['table_data'])
+                
+                # Add item to tree
+                comment_text = f"{comment_data['number']} - {comment_data['name']}"
+                new_item = QTreeWidgetItem(self.comment_item, [comment_text])
+                new_item.setData(0, Qt.ItemDataRole.UserRole, comment_data)
+                new_item.setIcon(0, IconService.get_icon('common-comment'))
+                imported_count += 1
+            
+            self.comment_item.setExpanded(True)
+            self.main_window.project_modified()
+            QMessageBox.information(self, "Import Complete", f"Successfully imported {imported_count} comment(s).")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Import Error", f"Failed to import comments: {str(e)}")
 
     def export_comments(self):
-        # Placeholder for future implementation
-        print("Export Comments action triggered.")
+        """Export comments to a JSON file."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export Comments", "", 
+            "JSON Files (*.json);;All Files (*)"
+        )
+        if not file_path:
+            return
+        
+        try:
+            # Collect all comments with their table data
+            comments_list = []
+            for i in range(self.comment_item.childCount()):
+                child = self.comment_item.child(i)
+                comment_data = child.data(0, Qt.ItemDataRole.UserRole)
+                if comment_data:
+                    export_data = copy.deepcopy(comment_data)
+                    # Include table data from service
+                    table_data = self.comment_service.get_table_data(comment_data.get('number'))
+                    if table_data:
+                        export_data['table_data'] = table_data
+                    comments_list.append(export_data)
+            
+            if not comments_list:
+                QMessageBox.warning(self, "Export Error", "No comments to export.")
+                return
+            
+            if not file_path.endswith('.json'):
+                file_path += '.json'
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump({'comments': comments_list}, f, indent=2, ensure_ascii=False)
+            
+            QMessageBox.information(self, "Export Complete", f"Successfully exported {len(comments_list)} comment(s).")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Export Error", f"Failed to export comments: {str(e)}")

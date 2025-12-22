@@ -23,7 +23,6 @@ class DockTitleBar(QWidget):
         
         # Title
         self.title_label = QLabel(title)
-        self.title_label.setStyleSheet(f"color: {c.TEXT_PRIMARY}; font-weight: normal;")
         layout.addWidget(self.title_label)
         
         layout.addStretch()
@@ -49,6 +48,10 @@ class DockTitleBar(QWidget):
             DockTitleBar {{
                 background-color: {c.BG_DARK_QUATERNARY};
                 border-bottom: 1px solid {c.BORDER_DARK};
+            }}
+            QLabel {{
+                color: {c.TEXT_PRIMARY};
+                font-weight: normal;
             }}
             QToolButton {{
                 background: transparent;

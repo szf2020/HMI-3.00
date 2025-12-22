@@ -289,9 +289,10 @@ class ColorButton(QPushButton):
 
     def _update_style(self):
         """Updates the stylesheet based on the color and selection state."""
+        from styles import colors
         if self._is_selected:
             # A prominent blue border for selection
-            style = f"background-color: {self._color.name()}; border: 2px solid #0078D7; border-radius: 2px;"
+            style = f"background-color: {self._color.name()}; border: 2px solid {colors.COLOR_FOCUS_HIGHLIGHT}; border-radius: 2px;"
         else:
             style = f"background-color: {self._color.name()}; border: 1px solid lightgrey;"
         self.setStyleSheet(style)
@@ -307,7 +308,6 @@ class ColorSelector(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Select Color")
         self.setFixedSize(600, 480)
-        self.setStyleSheet("")
         
         self.swatch_buttons = [] # To keep track of swatch buttons
         self._color = initial_color

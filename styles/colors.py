@@ -1,6 +1,36 @@
 """
 Centralized color theme for the HMI Designer Application.
 All color values are defined here to ensure consistency across the entire application.
+
+This module provides a Material Design-inspired dark theme with carefully chosen contrast
+ratios for optimal accessibility and visual hierarchy. Colors are organized by category
+for easy maintenance and extension.
+
+Color Categories:
+- DARK THEME: Primary backgrounds and surfaces (BG_DARK_*)
+- TEXT COLORS: Typography colors for different emphasis levels (TEXT_*)
+- ACCENT COLORS: Interactive and highlight colors (ACCENT_*, HOVER, SELECTED)
+- INTERACTIVE: States for user interactions (HOVER, SELECTED, SELECTION_HIGHLIGHT)
+- BORDERS: Divider and border colors (BORDER_*)
+- REFERENCE/FORMULA: Tag-specific colors for visual identification (BLUE, RED, GREEN, PURPLE)
+- DRAWING: Graphics and canvas colors (COLOR_SELECTION_*, COLOR_TRANSFORM_*, COLOR_GRID_*)
+- PATTERNS: Default colors for patterns and gradients
+- STATUS: Error, warning, and success indicators
+
+Usage:
+  from styles.colors import TEXT_PRIMARY, BG_DARK_PRIMARY, ACCENT_GREEN
+  
+  # Use in stylesheets
+  stylesheet = f"QLabel {{ color: {TEXT_PRIMARY}; background-color: {BG_DARK_PRIMARY}; }}"
+  
+  # Use with fonts
+  color = get_contrasting_text_color(BG_DARK_PRIMARY)  # Returns white or black
+
+Unused Colors (Reserved for Future Features):
+  - BG_DARK_SECONDARY, ACCENT_YELLOW_DARK: For alternative backgrounds/themes
+  - ACCENT_BLUE, ACCENT_BLUE_DARK: For primary action colors
+  - SELECTION_HIGHLIGHT_ALT: Alternate selection highlight for multi-select states
+  - Additional color slots available for theme extensions
 """
 
 # ============================================================================
@@ -37,11 +67,17 @@ ACCENT_YELLOW = "#fbbc05"         # Google Yellow
 ACCENT_YELLOW_DARK = "#f9ab00"    # Darker yellow
 
 # Interactive colors
-COLOR_SELECTED = "transparent"        # Tree item selected (transparent)
-COLOR_SELECTED_ALT = "transparent"    # Alternative selected color (transparent)
+COLOR_SELECTED = "rgba(84, 184, 255, 100)"        # Tree item selected (blue)
+COLOR_SELECTED_ALT = "rgba(84, 184, 255, 150)"    # Alternative selected color
 COLOR_HOVER = "#505050"           # Hover color (gray)
-COLOR_SELECTION_HIGHLIGHT = "transparent"  # Selection highlight
-COLOR_SELECTION_HIGHLIGHT_ALT = "rgba(0, 0, 0, 0)"  # Selection with transparency (transparent)
+COLOR_SELECTION_HIGHLIGHT = "rgba(84, 184, 255, 100)"  # Selection highlight
+COLOR_SELECTION_HIGHLIGHT_ALT = "rgba(84, 184, 255, 150)"  # Selection with transparency
+
+# Focus and selection state colors
+COLOR_FOCUS_HIGHLIGHT = "#0078D7"  # Focus/selection highlight (VS Code blue)
+COLOR_HOVER_FOCUS = "#5B9BD5"     # Hover focus state (Excel-style blue)
+COLOR_SELECTION_FILL = "#228B22"  # Selection fill color (forest green)
+COLOR_HEADER_TEXT = "#BFBFBF"     # Header text color (light grey)
 
 # ============================================================================
 # BORDER AND SEPARATOR COLORS
@@ -71,11 +107,12 @@ COLOR_SELECTION_BOX_BORDER = "#00FFFF"      # Cyan selection box border
 COLOR_SELECTION_BOX_FILL = "rgba(255, 255, 255, 0.5)"  # White semi-transparent fill
 COLOR_TRANSFORM_BORDER = "#00FFFF"          # Transform handler cyan border
 COLOR_TRANSFORM_INDIVIDUAL = "#FF4FF0"      # Individual transform magenta border
-COLOR_GRID_BACKGROUND = "#lightgrey"        # Canvas grid background
-COLOR_GRID = "#darkgray"                    # Grid color
+COLOR_GRID_BACKGROUND = "#d3d3d3"           # Canvas grid background (light grey)
+COLOR_GRID = "#a9a9a9"                      # Grid color (dark grey)
 
 # Canvas drawing defaults
 COLOR_DEFAULT_SHAPE_FILL = "rgba(200, 200, 200, 100)"  # Semi-transparent grey
+COLOR_DEFAULT_SHAPE_FILL_LIGHT = "#F15B5B"  # Light red default shape fill
 COLOR_DEFAULT_SHAPE_BORDER = "#000000"      # Black border for shapes
 
 # ============================================================================

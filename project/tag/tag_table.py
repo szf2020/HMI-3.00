@@ -552,7 +552,7 @@ class TagTable(QWidget):
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.setAlternatingRowColors(True)
+        self.table.setAlternatingRowColors(False)
         self.table.setRootIsDecorated(True)
         
         self.table.itemChanged.connect(self.on_item_changed)

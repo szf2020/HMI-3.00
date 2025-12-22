@@ -62,6 +62,39 @@ class CustomTreeWidget(QTreeWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context_menu)
     
+    def mousePressEvent(self, event):
+        """
+        Override mouse press event to prevent selection when clicking on branch lines.
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.isValid() and index.column() == 0:
+                # Get the visual rectangle of the item (content area)
+                rect = self.visualRect(index)
+                # If the click is to the left of the content area, it's in the branch area
+                if event.pos().x() < rect.left():
+                    # Toggle expansion if it's a parent item
+                    if self.model().hasChildren(index):
+                        self.setExpanded(index, not self.isExpanded(index))
+                    # Return without calling super() to prevent selection
+                    return
+        
+        super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        """
+        Override mouse double click event to prevent selection/actions when clicking on branch lines.
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.isValid() and index.column() == 0:
+                rect = self.visualRect(index)
+                if event.pos().x() < rect.left():
+                    # Return without calling super() to prevent selection and itemDoubleClicked signal
+                    return
+        
+        super().mouseDoubleClickEvent(event)
+
     def _apply_default_stylesheet(self, expand_icon_path, collapse_icon_path,
                                    vline_path="", branch_more_path="", branch_end_path=""):
         """Apply the default stylesheet. Can be overridden by subclasses."""

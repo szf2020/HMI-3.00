@@ -64,13 +64,13 @@ class CanvasWidget(QGraphicsWidget):
         rect = self.boundingRect()
 
         # Default background
-        painter.fillRect(rect, QColor("lightgrey"))
+        painter.fillRect(rect, QColor(colors.COLOR_GRID_BACKGROUND))
 
         if design_data:
             style_type = design_data.get("type")
             
             if style_type == "color":
-                color = QColor(design_data.get("color", "#F15B5B"))
+                color = QColor(design_data.get("color", colors.COLOR_DEFAULT_SHAPE_FILL_LIGHT))
                 painter.fillRect(rect, color)
             
             elif style_type == "gradient":
@@ -165,6 +165,7 @@ class CanvasBaseScreen(QGraphicsView):
         self.current_tool = None # The active drawing/editing tool
         self.transform_handler = None # The resizing/rotating handler
         self.snapping_threshold = 5
+        self._previous_selection = set()  # Track previous selection for deselection detection
 
         # Visibility Flags
         self.show_tags = True
@@ -276,6 +277,38 @@ class CanvasBaseScreen(QGraphicsView):
                 self.graphics_item_added.emit(item, data)
             
         return item
+
+    def delete_graphic_object(self, item):
+        """Deletes a graphic object from the scene."""
+        if isinstance(item, BaseGraphicObject) and item.scene():
+            # Remove from previous selection tracking
+            self._previous_selection.discard(item)
+            # Emit removal signal and remove from scene
+            self.graphics_item_removed.emit(item)
+            self.scene.removeItem(item)
+            self.clear_transform_handler()
+            self.save_items()
+
+    def duplicate_graphic_object(self, item):
+        """Duplicates a graphic object on the canvas."""
+        if not isinstance(item, BaseGraphicObject):
+            return None
+        
+        item_data = item.data(Qt.ItemDataRole.UserRole)
+        if not item_data:
+            return None
+        
+        import copy
+        new_data = copy.deepcopy(item_data)
+        new_data['id'] = self._generate_next_id()
+        
+        # Offset the position slightly so the duplicate is visible
+        pos = new_data.get('pos', [0, 0])
+        new_data['pos'] = [pos[0] + 20, pos[1] + 20]
+        
+        new_item = self.create_graphic_item_from_data(new_data)
+        self.save_items()
+        return new_item
 
     def _generate_next_id(self):
         """Generates the next sequential numeric ID for an object."""
@@ -414,8 +447,16 @@ class CanvasBaseScreen(QGraphicsView):
                         logger.error(f"CRITICAL: Error creating transform handler: {e}", exc_info=True)
                         self.transform_handler = None
             
-            # Calculate newly selected items (optimization: only valid BaseGraphicObject items)
-            self.canvas_selection_changed.emit(valid_items, [])
+            # Calculate deselected items by comparing with previous selection
+            current_selection_set = set(valid_items)
+            deselected_items = list(self._previous_selection - current_selection_set)
+            newly_selected_items = list(current_selection_set - self._previous_selection)
+            
+            # Update previous selection for next change
+            self._previous_selection = current_selection_set
+            
+            # Emit with actual deselected items
+            self.canvas_selection_changed.emit(valid_items, deselected_items)
         except Exception as e:
             logger.error(f"CRITICAL: Error in on_selection_changed: {e}", exc_info=True)
 
