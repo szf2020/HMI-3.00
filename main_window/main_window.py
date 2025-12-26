@@ -22,6 +22,7 @@ from .toolbars.edit_toolbar import EditToolbar
 from .toolbars.alignment_toolbar import AlignmentToolbar
 from .toolbars.figure_toolbar import FigureToolbar
 from .toolbars.object_toolbar import ObjectToolbar
+from .toolbars.object_properties_toolbar import ObjectPropertiesToolbar
 
 # Import tools
 from .toolbars.drawing_tools.rectangle_tool import RectangleTool
@@ -285,6 +286,18 @@ class MainWindow(QMainWindow):
             screen_widget.graphics_item_removed.connect(layers_dock.remove_canvas_object)
             screen_widget.canvas_selection_changed.connect(layers_dock.sync_canvas_selection)
         
+        # Connect canvas to property tree dock for property editing
+        property_dock = self.dock_factory.get_dock("property_tree")
+        if property_dock:
+            property_dock.set_current_canvas(screen_widget)
+            screen_widget.canvas_selection_changed.connect(property_dock.on_selection_changed)
+        
+        # Connect canvas to object properties toolbar for live updates
+        obj_props_toolbar = self.toolbars.get("Object Properties")
+        if obj_props_toolbar:
+            screen_widget.canvas_selection_changed.connect(obj_props_toolbar.sync_from_selection)
+            screen_widget.object_data_changed.connect(obj_props_toolbar.on_object_data_changed)
+        
         if screen_type == 'base':
             tab_title = f"[B] - {screen_number} - {screen_data.get('name')}"
             icon = IconService.get_icon("screen-base")
@@ -415,6 +428,9 @@ class MainWindow(QMainWindow):
         if screen_id_to_remove is not None:
             # Disconnect layers dock signals to prevent stale connections
             self._disconnect_screen_from_layers_dock(widget)
+            # Clean up canvas resources (unregister undo stack)
+            if isinstance(widget, CanvasBaseScreen) and hasattr(widget, 'cleanup'):
+                widget.cleanup()
             del self.open_screens[screen_id_to_remove]
             self.central_widget.removeTab(index)
             return
@@ -475,7 +491,7 @@ class MainWindow(QMainWindow):
         self.file_menu.save_action.triggered.connect(self.save_project)
         self.file_menu.save_as_action.triggered.connect(self.save_project_as)
 
-        # --- Edit Menu ---
+        # --- Edit Menu - Basic Operations ---
         self.edit_menu.undo_action.triggered.connect(self.undo_active_widget)
         self.edit_menu.redo_action.triggered.connect(self.redo_active_widget)
         self.edit_menu.cut_action.triggered.connect(self.cut_active_widget)
@@ -484,6 +500,28 @@ class MainWindow(QMainWindow):
         self.edit_menu.duplicate_action.triggered.connect(self.duplicate_active_widget)
         self.edit_menu.select_all_action.triggered.connect(self.select_all_in_active_widget)
         self.edit_menu.delete_action.triggered.connect(self.delete_in_active_widget)
+
+        # --- Edit Menu - Stacking Order ---
+        self.edit_menu.move_front_layer_action.triggered.connect(self.move_front_layer_active)
+        self.edit_menu.move_back_layer_action.triggered.connect(self.move_back_layer_active)
+        self.edit_menu.move_to_front_action.triggered.connect(self.move_to_front_active)
+        self.edit_menu.move_to_back_action.triggered.connect(self.move_to_back_active)
+
+        # --- Edit Menu - Alignment ---
+        self.edit_menu.align_left_action.triggered.connect(lambda: self.align_active('left'))
+        self.edit_menu.align_center_action.triggered.connect(lambda: self.align_active('center'))
+        self.edit_menu.align_right_action.triggered.connect(lambda: self.align_active('right'))
+        self.edit_menu.align_top_action.triggered.connect(lambda: self.align_active('top'))
+        self.edit_menu.align_middle_action.triggered.connect(lambda: self.align_active('middle'))
+        self.edit_menu.align_bottom_action.triggered.connect(lambda: self.align_active('bottom'))
+        self.edit_menu.dist_horz_action.triggered.connect(lambda: self.distribute_active('horizontal'))
+        self.edit_menu.dist_vert_action.triggered.connect(lambda: self.distribute_active('vertical'))
+
+        # --- Edit Menu - Flip/Rotate ---
+        self.edit_menu.flip_vert_action.triggered.connect(lambda: self.flip_active('vertical'))
+        self.edit_menu.flip_horz_action.triggered.connect(lambda: self.flip_active('horizontal'))
+        self.edit_menu.rotate_left_action.triggered.connect(lambda: self.rotate_active(-90))
+        self.edit_menu.rotate_right_action.triggered.connect(lambda: self.rotate_active(90))
 
         # --- View Menu & Toolbar (Zoom) ---
         self.view_menu.zoom_action_group.triggered.connect(self.on_zoom_action_triggered)
@@ -587,6 +625,13 @@ class MainWindow(QMainWindow):
         widget = self.central_widget.widget(index)
         self.update_status_bar(widget)
         
+        # Set the active undo stack in EditService based on the active tab
+        if isinstance(widget, CanvasBaseScreen) and hasattr(widget, '_stack_id'):
+            self.edit_service.set_active_stack(widget._stack_id)
+        else:
+            # For other widgets, we don't have central undo stack management yet
+            self.edit_service.set_active_stack(None)
+        
         # Sync layers panel with the new active screen
         layers_dock = self.dock_factory.get_dock("layers")
         if layers_dock:
@@ -594,6 +639,14 @@ class MainWindow(QMainWindow):
                 layers_dock.set_current_canvas(widget)
             else:
                 layers_dock.set_current_canvas(None)
+        
+        # Sync property panel with the new active screen
+        property_dock = self.dock_factory.get_dock("property_tree")
+        if property_dock:
+            if isinstance(widget, CanvasBaseScreen):
+                property_dock.set_current_canvas(widget)
+            else:
+                property_dock.set_current_canvas(None)
         
         # Sync tool state to the newly active tab
         if isinstance(widget, CanvasBaseScreen):
@@ -806,6 +859,62 @@ class MainWindow(QMainWindow):
             if selected_items:
                 widget.copy_screen(selected_items[0])
                 widget.paste_screen(selected_items[0])
+        elif hasattr(widget, 'duplicate'):
+            widget.duplicate()
+
+    # ========== Stacking Order Operations ==========
+
+    def move_front_layer_active(self):
+        """Move selected items one layer up in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen):
+            active_screen.move_front_layer()
+
+    def move_back_layer_active(self):
+        """Move selected items one layer down in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen):
+            active_screen.move_back_layer()
+
+    def move_to_front_active(self):
+        """Move selected items to the front in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen):
+            active_screen.move_to_front()
+
+    def move_to_back_active(self):
+        """Move selected items to the back in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen):
+            active_screen.move_to_back()
+
+    # ========== Alignment Operations ==========
+
+    def align_active(self, alignment):
+        """Align selected items in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen) and hasattr(active_screen, 'align_items'):
+            active_screen.align_items(alignment)
+
+    def distribute_active(self, direction):
+        """Distribute selected items in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen) and hasattr(active_screen, 'distribute_items'):
+            active_screen.distribute_items(direction)
+
+    # ========== Flip/Rotate Operations ==========
+
+    def flip_active(self, direction):
+        """Flip selected items in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen) and hasattr(active_screen, 'flip_items'):
+            active_screen.flip_items(direction)
+
+    def rotate_active(self, angle):
+        """Rotate selected items in the active canvas."""
+        active_screen = self.get_active_screen_widget()
+        if isinstance(active_screen, CanvasBaseScreen) and hasattr(active_screen, 'rotate_items'):
+            active_screen.rotate_items(angle)
 
     def _create_menu_bar(self):
         """
@@ -855,6 +964,7 @@ class MainWindow(QMainWindow):
         self.toolbars["Alignment"] = AlignmentToolbar(self, self.edit_menu)
         self.toolbars["Figure"] = FigureToolbar(self, self.figure_menu)
         self.toolbars["Object"] = ObjectToolbar(self, self.object_menu)
+        self.toolbars["Object Properties"] = ObjectPropertiesToolbar(self)
         
         for name, toolbar in self.toolbars.items():
             # Set a unique object name for each toolbar so its state can be saved.

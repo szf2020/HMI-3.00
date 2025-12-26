@@ -359,8 +359,33 @@ def get_toolbar_stylesheet() -> str:
             width: 1px;
             margin: 4px;
         }}
-        QToolBar QSpinBox, QToolBar QComboBox {{
+        QToolBar QSpinBox, QToolBar QDoubleSpinBox, QToolBar QComboBox {{
             min-height: 24px;
+            max-height: 24px;
+        }}
+        QToolBar QCheckBox::indicator {{
+            width: 18px;
+            height: 18px;
+        }}
+    """
+
+
+def get_object_properties_toolbar_stylesheet() -> str:
+    """
+    Generate stylesheet for object properties toolbar.
+    Ensures consistent spinbox and label styling.
+    
+    Returns:
+        QSS stylesheet string for object properties toolbar
+    """
+    return f"""
+        QDoubleSpinBox {{
+            min-height: 24px;
+            max-height: 24px;
+            padding: 2px 4px;
+        }}
+        QLabel {{
+            padding: 0px 2px;
         }}
     """
 
@@ -417,4 +442,5 @@ STYLESHEETS = {
     "normal_text": get_normal_text_stylesheet,
     "menu": get_menu_stylesheet,
     "toolbar": get_toolbar_stylesheet,
+    "object_properties_toolbar": get_object_properties_toolbar_stylesheet,
 }

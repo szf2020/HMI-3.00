@@ -668,8 +668,10 @@ class Spreadsheet(QTableWidget):
                     # Limitation: Standard text clipboard doesn't hold source coordinates.
                     # Solution: Use EditService for internal copy to track source row/col.
                     
-                    source_data = self.parent().main_window.edit_service.get_custom_data()
-                    if source_data and 'is_spreadsheet' in source_data:
+                    from services.edit_service import ClipboardDataType
+                    clipboard_data, clipboard_type, _ = self.parent().main_window.edit_service.get_clipboard()
+                    if clipboard_type == ClipboardDataType.TABLE_CELLS and clipboard_data and 'is_spreadsheet' in clipboard_data:
+                        source_data = clipboard_data
                         # Use internal logic if available
                         src_r = source_data['start_row'] + r_idx
                         src_c = source_data['start_col'] + c_idx
@@ -692,12 +694,13 @@ class Spreadsheet(QTableWidget):
         r1, c1 = selection[0].topRow(), selection[0].leftColumn()
         r2, c2 = selection[0].bottomRow(), selection[0].rightColumn()
         
-        # Save metadata for intelligent paste
-        self.parent().main_window.edit_service.copy_custom_data({
+        # Save metadata for intelligent paste using new EditService API
+        from services.edit_service import ClipboardDataType
+        self.parent().main_window.edit_service.set_clipboard({
             'is_spreadsheet': True,
             'start_row': r1,
             'start_col': c1
-        })
+        }, ClipboardDataType.TABLE_CELLS)
         
         text = ""
         for r in range(r1, r2 + 1):

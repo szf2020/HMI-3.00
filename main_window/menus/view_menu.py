@@ -39,6 +39,7 @@ class ViewMenu:
             ("Alignment", IconService.get_icon('view-alignment')),
             ("Figure", IconService.get_icon('view-figure')),
             ("Object", IconService.get_icon('view-object')),
+            ("Object Properties", IconService.get_icon('object-size')),
         ]
         self._create_checkable_actions(self.tool_bar_menu, toolbar_items)
 

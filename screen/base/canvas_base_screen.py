@@ -1,12 +1,18 @@
 # screen\base\canvas_base_screen.py
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsWidget, QLabel, QGraphicsItem, QGraphicsSimpleTextItem
-from PySide6.QtGui import QPainter, QColor, QBrush, QLinearGradient, QPixmap, QPen, QFont
+from PySide6.QtGui import QPainter, QColor, QBrush, QLinearGradient, QPixmap, QPen, QFont, QUndoStack
 from PySide6.QtCore import Qt, QRectF, Signal, QPointF, QLineF
 from styles import colors
 
 from screen.base.base_graphic_object import RectangleObject, EllipseObject, BaseGraphicObject
+from services.edit_service import EditService, ClipboardDataType
+from services.undo_commands import (
+    AddItemCommand, RemoveItemCommand, MoveItemsCommand, 
+    PasteItemsCommand, DuplicateItemsCommand, ZOrderCommand
+)
 from debug_utils import get_logger
 import uuid
+import copy
 from main_window.toolbars.transform_handler import TransformHandler, AverageTransformHandler
 
 logger = get_logger(__name__)
@@ -173,6 +179,18 @@ class CanvasBaseScreen(QGraphicsView):
         self.show_transform_lines = True
         self.show_click_area = True # Click area is essentially the bounding rect visual
 
+        # Initialize undo stack and edit service
+        self.edit_service = EditService()
+        self.undo_stack = QUndoStack(self)
+        
+        # Generate unique ID for this canvas's undo stack
+        screen_type = screen_data.get('type', 'base')
+        screen_number = screen_data.get('number', 0)
+        self._stack_id = f"canvas_{screen_type}_{screen_number}"
+        
+        # Register with EditService
+        self.edit_service.register_undo_stack(self._stack_id, self.undo_stack)
+
         # Create a scene and the canvas widget
         self.scene = QGraphicsScene(self)
         self.scene.selectionChanged.connect(self.on_selection_changed)
@@ -328,7 +346,7 @@ class CanvasBaseScreen(QGraphicsView):
         return max_id + 1
 
     def add_new_item(self, item_type, rect, pos):
-        """Registers a newly drawn item using the factory logic."""
+        """Registers a newly drawn item using the factory logic with undo support."""
         new_id = self._generate_next_id()
         width = rect.width()
         height = rect.height()
@@ -343,10 +361,9 @@ class CanvasBaseScreen(QGraphicsView):
             'tag': ''
         }
         
-        # Use the factory logic to create the correct item type
-        # Note: Signal is already emitted by create_graphic_item_from_data when is_restoring=False
-        graphics_item = self.create_graphic_item_from_data(data)
-        self.save_items()
+        # Use AddItemCommand for undo support
+        command = AddItemCommand(self, data, f"Add {item_type}")
+        self.undo_stack.push(command)
 
     def _add_overlays(self, item, data):
         """Adds text labels for ID and Tag."""
@@ -461,7 +478,7 @@ class CanvasBaseScreen(QGraphicsView):
             logger.error(f"CRITICAL: Error in on_selection_changed: {e}", exc_info=True)
 
     def _update_selected_object_info(self):
-        """Emits object data changed signal with current selected object's position and size."""
+        """Emits object data changed signal with current selected object's position, size, and rotation."""
         selected_items = self.scene.selectedItems()
         valid_items = [item for item in selected_items if isinstance(item, BaseGraphicObject)]
         
@@ -471,13 +488,15 @@ class CanvasBaseScreen(QGraphicsView):
             rect = item.boundingRect()
             self.object_data_changed.emit({
                 'position': (int(pos.x()), int(pos.y())),
-                'size': (int(rect.width()), int(rect.height()))
+                'size': (int(rect.width()), int(rect.height())),
+                'rotation': item.rotation()
             })
         elif len(valid_items) == 0:
             # No selection - emit empty data
             self.object_data_changed.emit({
                 'position': None,
-                'size': None
+                'size': None,
+                'rotation': None
             })
         # For multiple items, we don't show position/size (ambiguous)
 
@@ -736,13 +755,9 @@ class CanvasBaseScreen(QGraphicsView):
             self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
             event.accept()
         elif event.key() == Qt.Key.Key_Delete:
-            if self.scene.selectedItems():
-                for item in self.scene.selectedItems():
-                    if isinstance(item, BaseGraphicObject):
-                        self.graphics_item_removed.emit(item)
-                        self.scene.removeItem(item)
-                self.clear_transform_handler()
-                self.save_items()
+            # Use the centralized delete method with undo support
+            self.delete()
+            event.accept()
         else:
             super().keyPressEvent(event)
             
@@ -795,3 +810,383 @@ class CanvasBaseScreen(QGraphicsView):
         self.fitInView(self.canvas_widget.boundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
         self.zoom_factor = self.transform().m11()
         self.zoom_changed.emit(self.zoom_factor)
+
+    # ========== Edit Operations (Cut/Copy/Paste/Delete/Undo/Redo) ==========
+
+    def cut(self):
+        """Cut selected items to clipboard."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            logger.debug("Cut: No items selected")
+            return
+        
+        # Copy items data to clipboard
+        items_data = []
+        for item in selected_items:
+            item_data = item.data(Qt.ItemDataRole.UserRole)
+            if item_data:
+                data_copy = copy.deepcopy(item_data)
+                data_copy['pos'] = [item.pos().x(), item.pos().y()]
+                rect = item.boundingRect()
+                data_copy['rect'] = [rect.x(), rect.y(), rect.width(), rect.height()]
+                items_data.append(data_copy)
+        
+        # Store in clipboard with cut flag
+        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=True)
+        
+        # Delete items using undo command
+        command = RemoveItemCommand(self, selected_items, "Cut Items")
+        self.undo_stack.push(command)
+        
+        logger.debug(f"Cut {len(selected_items)} items")
+
+    def copy(self):
+        """Copy selected items to clipboard."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            logger.debug("Copy: No items selected")
+            return
+        
+        # Copy items data to clipboard
+        items_data = []
+        for item in selected_items:
+            item_data = item.data(Qt.ItemDataRole.UserRole)
+            if item_data:
+                data_copy = copy.deepcopy(item_data)
+                data_copy['pos'] = [item.pos().x(), item.pos().y()]
+                rect = item.boundingRect()
+                data_copy['rect'] = [rect.x(), rect.y(), rect.width(), rect.height()]
+                items_data.append(data_copy)
+        
+        # Store in clipboard (not a cut operation)
+        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=False)
+        
+        logger.debug(f"Copied {len(selected_items)} items")
+
+    def paste(self):
+        """Paste items from clipboard."""
+        clipboard_data, data_type, is_cut = self.edit_service.get_clipboard()
+        
+        if data_type != ClipboardDataType.CANVAS_ITEMS or not clipboard_data:
+            logger.debug("Paste: No canvas items in clipboard")
+            return
+        
+        # Use paste command for undo support
+        command = PasteItemsCommand(self, clipboard_data, QPointF(20, 20), "Paste Items")
+        self.undo_stack.push(command)
+        
+        # If this was a cut operation, mark it as completed so subsequent pastes don't re-delete
+        if is_cut:
+            self.edit_service.mark_cut_completed()
+        
+        logger.debug(f"Pasted {len(clipboard_data)} items")
+
+    def delete(self):
+        """Delete selected items."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            logger.debug("Delete: No items selected")
+            return
+        
+        # Use remove command for undo support
+        command = RemoveItemCommand(self, selected_items, "Delete Items")
+        self.undo_stack.push(command)
+        
+        logger.debug(f"Deleted {len(selected_items)} items")
+
+    def duplicate(self):
+        """Duplicate selected items with offset."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            logger.debug("Duplicate: No items selected")
+            return
+        
+        # Use duplicate command for undo support
+        command = DuplicateItemsCommand(self, selected_items, QPointF(20, 20), "Duplicate Items")
+        self.undo_stack.push(command)
+        
+        logger.debug(f"Duplicated {len(selected_items)} items")
+
+    def selectAll(self):
+        """Select all graphic items on the canvas."""
+        for item in self.scene.items():
+            if isinstance(item, BaseGraphicObject):
+                item.setSelected(True)
+        logger.debug("Selected all items")
+
+    def undo(self):
+        """Undo the last action."""
+        if self.undo_stack.canUndo():
+            self.undo_stack.undo()
+            logger.debug(f"Undo: {self.undo_stack.undoText()}")
+
+    def redo(self):
+        """Redo the last undone action."""
+        if self.undo_stack.canRedo():
+            self.undo_stack.redo()
+            logger.debug(f"Redo: {self.undo_stack.redoText()}")
+
+    def can_undo(self):
+        """Returns True if undo is available."""
+        return self.undo_stack.canUndo()
+
+    def can_redo(self):
+        """Returns True if redo is available."""
+        return self.undo_stack.canRedo()
+
+    # ========== Stacking Order Operations ==========
+
+    def move_front_layer(self):
+        """Move selected items one layer up (increase z-value)."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        old_z_values = [item.zValue() for item in selected_items]
+        new_z_values = [z + 1 for z in old_z_values]
+        
+        command = ZOrderCommand(selected_items, old_z_values, new_z_values, "Move Front Layer")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    def move_back_layer(self):
+        """Move selected items one layer down (decrease z-value)."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        old_z_values = [item.zValue() for item in selected_items]
+        new_z_values = [z - 1 for z in old_z_values]
+        
+        command = ZOrderCommand(selected_items, old_z_values, new_z_values, "Move Back Layer")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    def move_to_front(self):
+        """Move selected items to the front (highest z-value)."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        # Find the highest z-value among all items
+        max_z = 0
+        for item in self.scene.items():
+            if isinstance(item, BaseGraphicObject):
+                max_z = max(max_z, item.zValue())
+        
+        old_z_values = [item.zValue() for item in selected_items]
+        new_z_values = [max_z + 1 + i for i in range(len(selected_items))]
+        
+        command = ZOrderCommand(selected_items, old_z_values, new_z_values, "Move to Front")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    def move_to_back(self):
+        """Move selected items to the back (lowest z-value)."""
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        # Find the lowest z-value among all items
+        min_z = 0
+        for item in self.scene.items():
+            if isinstance(item, BaseGraphicObject):
+                min_z = min(min_z, item.zValue())
+        
+        old_z_values = [item.zValue() for item in selected_items]
+        new_z_values = [min_z - len(selected_items) + i for i in range(len(selected_items))]
+        
+        command = ZOrderCommand(selected_items, old_z_values, new_z_values, "Move to Back")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    # ========== Alignment Operations ==========
+
+    def align_items(self, alignment):
+        """
+        Align selected items based on alignment type.
+        
+        Args:
+            alignment: 'left', 'center', 'right', 'top', 'middle', 'bottom'
+        """
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if len(selected_items) < 2:
+            return  # Need at least 2 items to align
+        
+        # Get bounding rects
+        rects = [item.sceneBoundingRect() for item in selected_items]
+        
+        # Calculate alignment target based on first selected item (anchor)
+        anchor_rect = rects[0]
+        
+        old_positions = [item.pos() for item in selected_items]
+        new_positions = []
+        
+        for item, rect in zip(selected_items, rects):
+            new_pos = item.pos()
+            
+            if alignment == 'left':
+                new_pos.setX(new_pos.x() + (anchor_rect.left() - rect.left()))
+            elif alignment == 'center':
+                new_pos.setX(new_pos.x() + (anchor_rect.center().x() - rect.center().x()))
+            elif alignment == 'right':
+                new_pos.setX(new_pos.x() + (anchor_rect.right() - rect.right()))
+            elif alignment == 'top':
+                new_pos.setY(new_pos.y() + (anchor_rect.top() - rect.top()))
+            elif alignment == 'middle':
+                new_pos.setY(new_pos.y() + (anchor_rect.center().y() - rect.center().y()))
+            elif alignment == 'bottom':
+                new_pos.setY(new_pos.y() + (anchor_rect.bottom() - rect.bottom()))
+            
+            new_positions.append(new_pos)
+        
+        # Create move command for undo support
+        command = MoveItemsCommand(selected_items, old_positions, new_positions, f"Align {alignment}")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    def distribute_items(self, direction):
+        """
+        Distribute selected items evenly.
+        
+        Args:
+            direction: 'horizontal' or 'vertical'
+        """
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if len(selected_items) < 3:
+            return  # Need at least 3 items to distribute
+        
+        rects = [(item, item.sceneBoundingRect()) for item in selected_items]
+        
+        if direction == 'horizontal':
+            # Sort by x position
+            rects.sort(key=lambda x: x[1].left())
+            
+            # Calculate total spacing
+            first_left = rects[0][1].left()
+            last_right = rects[-1][1].right()
+            total_width = sum(r[1].width() for _, r in rects)
+            spacing = (last_right - first_left - total_width) / (len(rects) - 1)
+            
+            old_positions = [item.pos() for item, _ in rects]
+            new_positions = []
+            
+            current_x = first_left
+            for item, rect in rects:
+                new_pos = item.pos()
+                new_pos.setX(new_pos.x() + (current_x - rect.left()))
+                new_positions.append(new_pos)
+                current_x += rect.width() + spacing
+        else:  # vertical
+            # Sort by y position
+            rects.sort(key=lambda x: x[1].top())
+            
+            first_top = rects[0][1].top()
+            last_bottom = rects[-1][1].bottom()
+            total_height = sum(r[1].height() for _, r in rects)
+            spacing = (last_bottom - first_top - total_height) / (len(rects) - 1)
+            
+            old_positions = [item.pos() for item, _ in rects]
+            new_positions = []
+            
+            current_y = first_top
+            for item, rect in rects:
+                new_pos = item.pos()
+                new_pos.setY(new_pos.y() + (current_y - rect.top()))
+                new_positions.append(new_pos)
+                current_y += rect.height() + spacing
+        
+        items = [item for item, _ in rects]
+        command = MoveItemsCommand(items, old_positions, new_positions, f"Distribute {direction}")
+        self.undo_stack.push(command)
+        self.save_items()
+
+    # ========== Flip/Rotate Operations ==========
+
+    def flip_items(self, direction):
+        """
+        Flip selected items.
+        
+        Args:
+            direction: 'horizontal' or 'vertical'
+        """
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        # Get the center of all selected items
+        combined_rect = selected_items[0].sceneBoundingRect()
+        for item in selected_items[1:]:
+            combined_rect = combined_rect.united(item.sceneBoundingRect())
+        
+        center = combined_rect.center()
+        
+        for item in selected_items:
+            current_transform = item.transform()
+            
+            if direction == 'horizontal':
+                # Flip horizontally (mirror across y-axis at center)
+                item.setTransform(current_transform.scale(-1, 1))
+                # Adjust position to keep item in place
+                item_center = item.sceneBoundingRect().center()
+                offset_x = 2 * (center.x() - item_center.x())
+                item.moveBy(offset_x, 0)
+            else:
+                # Flip vertically (mirror across x-axis at center)
+                item.setTransform(current_transform.scale(1, -1))
+                item_center = item.sceneBoundingRect().center()
+                offset_y = 2 * (center.y() - item_center.y())
+                item.moveBy(0, offset_y)
+        
+        self.save_items()
+        logger.debug(f"Flipped {len(selected_items)} items {direction}")
+
+    def rotate_items(self, angle):
+        """
+        Rotate selected items by the specified angle.
+        
+        Args:
+            angle: Rotation angle in degrees (positive = clockwise)
+        """
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
+        if not selected_items:
+            return
+        
+        # Get the center of all selected items
+        combined_rect = selected_items[0].sceneBoundingRect()
+        for item in selected_items[1:]:
+            combined_rect = combined_rect.united(item.sceneBoundingRect())
+        
+        center = combined_rect.center()
+        
+        for item in selected_items:
+            # Get current rotation
+            current_rotation = item.rotation()
+            new_rotation = current_rotation + angle
+            
+            # Rotate around the combined center point
+            item.setTransformOriginPoint(item.mapFromScene(center))
+            item.setRotation(new_rotation)
+        
+        self.save_items()
+        logger.debug(f"Rotated {len(selected_items)} items by {angle} degrees")
+
+    # ========== Cleanup ==========
+
+    def cleanup(self):
+        """Clean up resources when the canvas is closed."""
+        # Unregister undo stack from EditService
+        self.edit_service.unregister_undo_stack(self._stack_id)
+        logger.debug(f"Canvas {self._stack_id} cleaned up")
