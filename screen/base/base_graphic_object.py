@@ -1,9 +1,21 @@
 # screen\base\base_graphic_object.py
-from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsItem
-from PySide6.QtCore import QRectF, QPointF
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsItem, QGraphicsPathItem
+from PySide6.QtCore import QRectF, QPointF, Qt
+from PySide6.QtGui import QPainterPath, QPen, QBrush
 from debug_utils import get_logger
 
 logger = get_logger(__name__)
+
+
+class HiddenQGraphicsRectItem(QGraphicsRectItem):
+    """
+    A QGraphicsRectItem that doesn't paint itself.
+    Used as a composed item to provide geometry management without visual rendering.
+    """
+    def paint(self, painter, option, widget=None):
+        # Don't paint anything - parent will handle all rendering
+        pass
+
 
 class BaseGraphicObject(QGraphicsItem):
     """
@@ -17,6 +29,8 @@ class BaseGraphicObject(QGraphicsItem):
         self.item.setParentItem(self)
         self.view_service = view_service
         self.view = view
+        # Flag to disable snap offset during transform handler operations
+        self._transform_in_progress = False
 
     def boundingRect(self):
         return self.item.boundingRect()
@@ -33,9 +47,19 @@ class BaseGraphicObject(QGraphicsItem):
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
+    def set_transform_in_progress(self, in_progress):
+        """Flag to disable snap logic during handler-driven transforms."""
+        self._transform_in_progress = in_progress
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():
             new_pos = value
+            
+            # Skip snap logic if transform is being driven by the handler
+            if self._transform_in_progress:
+                new_pos.setX(round(new_pos.x()))
+                new_pos.setY(round(new_pos.y()))
+                return new_pos
             
             if self.view_service and self.view_service.snap_enabled:
                 if self.view_service.snapping_mode == 'grid':
@@ -118,30 +142,172 @@ class BaseGraphicObject(QGraphicsItem):
 class RectangleObject(BaseGraphicObject):
     """
     A concrete implementation for a rectangle object.
+    Supports individual corner radius for rounded corners.
     """
     def __init__(self, rect: QRectF, view_service=None, view=None, parent=None):
-        # We create a QGraphicsRectItem and compose it.
-        super().__init__(QGraphicsRectItem(rect), view_service, view, parent)
+        # Use HiddenQGraphicsRectItem that doesn't paint itself
+        hidden_rect = HiddenQGraphicsRectItem(rect)
+        super().__init__(hidden_rect, view_service, view, parent)
+        # Corner radii: [top_left, top_right, bottom_right, bottom_left]
+        self._corner_radii = [0.0, 0.0, 0.0, 0.0]
+        self._rounded_enabled = False
 
     @property
     def rect_item(self) -> QGraphicsRectItem:
         return self.item
 
+    @property
+    def corner_radii(self):
+        """Get corner radii [top_left, top_right, bottom_right, bottom_left]."""
+        return self._corner_radii.copy()
+    
+    @corner_radii.setter
+    def corner_radii(self, radii):
+        """Set corner radii [top_left, top_right, bottom_right, bottom_left]."""
+        if len(radii) == 4:
+            self._corner_radii = list(radii)
+            self.update()
+    
+    @property
+    def rounded_enabled(self):
+        """Check if rounded corners are enabled."""
+        return self._rounded_enabled
+    
+    @rounded_enabled.setter
+    def rounded_enabled(self, enabled):
+        """Enable or disable rounded corners."""
+        self._rounded_enabled = enabled
+        # Invalidate cached path when mode changes
+        if hasattr(self, '_cached_path_key'):
+            self._cached_path_key = None
+        self.update()
+    
+    def set_corner_radius(self, corner_index, radius):
+        """Set radius for a specific corner (0=TL, 1=TR, 2=BR, 3=BL)."""
+        if 0 <= corner_index < 4:
+            # Clamp radius to half the smallest dimension
+            rect = self.rect_item.rect()
+            max_radius = min(rect.width(), rect.height()) / 2.0
+            self._corner_radii[corner_index] = max(0, min(radius, max_radius))
+            self.update()
+    
+    def set_all_corner_radii(self, radius):
+        """Set the same radius for all corners."""
+        rect = self.rect_item.rect()
+        max_radius = min(rect.width(), rect.height()) / 2.0
+        clamped = max(0, min(radius, max_radius))
+        self._corner_radii = [clamped, clamped, clamped, clamped]
+        self.update()
+    
+    def has_rounded_corners(self):
+        """Check if any corner has a non-zero radius."""
+        return self._rounded_enabled and any(r > 0 for r in self._corner_radii)
+
     def set_geometry(self, rect: QRectF):
         """
         Sets the geometry of the underlying QGraphicsRectItem.
+        Invalidates rounded path cache when geometry changes.
         """
         try:
             self.prepareGeometryChange()
             self.rect_item.setRect(rect)
+            # Adjust corner radii if they exceed the new dimensions
+            max_radius = min(rect.width(), rect.height()) / 2.0
+            self._corner_radii = [min(r, max_radius) for r in self._corner_radii]
+            # Invalidate cached path since geometry changed
+            if hasattr(self, '_cached_path_key'):
+                self._cached_path_key = None
         except Exception as e:
             logger.error(f"CRITICAL: Error in RectangleObject.set_geometry: {e}", exc_info=True)
 
+    def _create_rounded_path(self):
+        """Create a QPainterPath with individual corner radii. Cached to avoid recalculation."""
+        # Cache key: combination of rect and radii
+        if not hasattr(self, '_cached_rounded_path'):
+            self._cached_rounded_path = None
+            self._cached_path_key = None
+        
+        rect = self.rect_item.rect()
+        radii_tuple = tuple(self._corner_radii)
+        path_key = (round(rect.width(), 2), round(rect.height(), 2), radii_tuple)
+        
+        # Return cached path if geometry hasn't changed
+        if self._cached_path_key == path_key and self._cached_rounded_path is not None:
+            return self._cached_rounded_path
+        
+        path = QPainterPath()
+        
+        tl, tr, br, bl = self._corner_radii
+        
+        # Start from top-left, after the corner arc
+        path.moveTo(rect.left() + tl, rect.top())
+        
+        # Top edge to top-right corner
+        path.lineTo(rect.right() - tr, rect.top())
+        
+        # Top-right corner arc
+        if tr > 0:
+            path.arcTo(rect.right() - 2*tr, rect.top(), 2*tr, 2*tr, 90, -90)
+        else:
+            path.lineTo(rect.right(), rect.top())
+        
+        # Right edge to bottom-right corner
+        path.lineTo(rect.right(), rect.bottom() - br)
+        
+        # Bottom-right corner arc
+        if br > 0:
+            path.arcTo(rect.right() - 2*br, rect.bottom() - 2*br, 2*br, 2*br, 0, -90)
+        else:
+            path.lineTo(rect.right(), rect.bottom())
+        
+        # Bottom edge to bottom-left corner
+        path.lineTo(rect.left() + bl, rect.bottom())
+        
+        # Bottom-left corner arc
+        if bl > 0:
+            path.arcTo(rect.left(), rect.bottom() - 2*bl, 2*bl, 2*bl, -90, -90)
+        else:
+            path.lineTo(rect.left(), rect.bottom())
+        
+        # Left edge to top-left corner
+        path.lineTo(rect.left(), rect.top() + tl)
+        
+        # Top-left corner arc
+        if tl > 0:
+            path.arcTo(rect.left(), rect.top(), 2*tl, 2*tl, 180, -90)
+        else:
+            path.lineTo(rect.left(), rect.top())
+        
+        path.closeSubpath()
+        
+        # Cache the path
+        self._cached_rounded_path = path
+        self._cached_path_key = path_key
+        
+        return path
 
     def paint(self, painter, option, widget):
-        # We need to explicitly call the composed item's paint method
-        # if we want it to be rendered.
-        self.item.paint(painter, option, widget)
+        # Always draw the shape ourselves to have full control
+        # Get the current pen and brush from the composed item
+        pen = self.item.pen()
+        brush = self.item.brush()
+        
+        # If rounded corners are enabled and have non-zero radii, draw custom path
+        if self.has_rounded_corners():
+            painter.save()
+            painter.setPen(pen)
+            painter.setBrush(brush)
+            path = self._create_rounded_path()
+            painter.drawPath(path)
+            painter.restore()
+        else:
+            # For normal rectangles, draw a regular rect
+            painter.save()
+            painter.setPen(pen)
+            painter.setBrush(brush)
+            rect = self.rect_item.rect()
+            painter.drawRect(rect)
+            painter.restore()
 
 
 class EllipseObject(BaseGraphicObject):

@@ -582,6 +582,17 @@ class MainWindow(QMainWindow):
         self.view_menu.transform_line_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('transform', checked))
         self.view_menu.click_area_action.triggered.connect(lambda checked: self.toggle_canvas_overlay('click_area', checked))
 
+        # --- Sync opacity between Layers dock and Property Tree dock ---
+        layers_dock = self.dock_factory.get_dock("layers")
+        property_dock = self.dock_factory.get_dock("property_tree")
+        if layers_dock and property_dock:
+            # When layers dock opacity changes, update property tree style tab
+            layers_dock.opacityChanged.connect(property_dock.set_opacity_from_layers)
+            # When property tree style tab opacity changes, update layers dock
+            property_dock.get_style_tab_opacity_signal().connect(
+                lambda opacity: layers_dock.set_opacity_ui(int(opacity * 100))
+            )
+
     def toggle_canvas_overlay(self, overlay_type, visible):
         """Toggles visibility of overlays on the active canvas."""
         active_screen = self.get_active_screen_widget()

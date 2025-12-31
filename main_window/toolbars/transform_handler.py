@@ -8,11 +8,11 @@ Supports rotation from corner handles with center anchor point.
 """
 
 import math
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsEllipseItem
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import QPen, QBrush, QColor, QCursor, QPixmap, QPainter
 from styles import colors
-from screen.base.base_graphic_object import BaseGraphicObject
+from screen.base.base_graphic_object import BaseGraphicObject, RectangleObject
 from debug_utils import get_logger
 
 logger = get_logger(__name__)
@@ -85,20 +85,52 @@ class TransformHandle(QGraphicsRectItem):
             painter.drawRect(-3, -3, 6, 6)
 
 
+class CornerRadiusHandle(QGraphicsEllipseItem):
+    """A small dot handle for adjusting individual corner radius."""
+    
+    def __init__(self, corner_index, parent=None):
+        # Hit area: 10x10 pixel circle, Visual area: 6x6
+        super().__init__(-5, -5, 10, 10, parent)
+        self.corner_index = corner_index  # 0=TL, 1=TR, 2=BR, 3=BL
+        
+        # Use a distinct blue color for corner radius handles
+        self.setBrush(QBrush(QColor(0, 120, 215)))  # Blue fill
+        self.setPen(QPen(QColor(255, 255, 255), 1.5))  # White border
+        
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        
+        # Ensure handles stay consistent size regardless of zoom
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
+        
+        # Initially hidden
+        self.setVisible(False)
+
+    def paint(self, painter, option, widget=None):
+        """Draws the visual representation of the corner radius handle."""
+        painter.setPen(self.pen())
+        painter.setBrush(self.brush())
+        # Visual area: 6x6 circle
+        painter.drawEllipse(-3, -3, 6, 6)
+
+
 class BaseTransformHandler(QGraphicsItem):
     """
     Base class for transform handlers with robust state management.
     Provides common functionality and error handling for all handlers.
     Supports rotation from corner handles with center anchor point.
+    Supports corner radius adjustment for rounded rectangles.
     """
 
     # Offset for rotation handles from corners (in pixels)
     ROTATION_HANDLE_OFFSET = 20
+    # Offset for corner radius handles (inside the corner)
+    CORNER_RADIUS_HANDLE_OFFSET = 15
 
     def __init__(self, scene, view_service):
         super().__init__()
         self._is_resizing = False
         self._is_rotating = False
+        self._is_adjusting_corner_radius = False
         self.scene_ref = scene
         self.view_service = view_service
         
@@ -114,17 +146,25 @@ class BaseTransformHandler(QGraphicsItem):
         self._is_valid = True
         self._handles = {}
         self._rotation_handles = {}
+        self._corner_radius_handles = {}
         
         # Rotation state
         self._rotation_start_angle = 0.0
         self._rotation_center = QPointF()
         self._initial_item_rotation = 0.0
         
+        # Corner radius state
+        self._corner_radius_mode_enabled = False
+        self._initial_corner_radii = [0.0, 0.0, 0.0, 0.0]
+        self._corner_drag_start_pos = QPointF()
+        self._active_corner_index = -1
+        
         # Create rotation cursor
         self._rotation_cursor = create_rotation_cursor()
         
         self._create_handles()
         self._create_rotation_handles()
+        self._create_corner_radius_handles()
         
         # CRITICAL: Do NOT call addItem(self) here. 
         # Subclasses must call addToScene() explicitly at the end of their __init__.
@@ -133,16 +173,15 @@ class BaseTransformHandler(QGraphicsItem):
         """Safely add the handler to the scene after full initialization."""
         if self.scene_ref:
             try:
-                # Check if already in a scene to avoid errors
+                # Check if already in a scene to avoid duplicate additions
                 if self.scene() == self.scene_ref:
-                    return
+                    return  # Already added, skip
+                
                 self.scene_ref.addItem(self)
                 
-                # Also add rotation handles to the scene (they are not children)
-                for handle in self._rotation_handles.values():
-                    if handle and handle.scene() != self.scene_ref:
-                        self.scene_ref.addItem(handle)
-                        handle.setZValue(10000)  # Above the transform handler
+                # Child items (handles parented to us) are automatically added to scene
+                # No need to manually add them
+                
             except Exception as e:
                 logger.error(f"Error adding handler to scene: {e}")
                 self.scene_ref = None
@@ -171,19 +210,32 @@ class BaseTransformHandler(QGraphicsItem):
                 logger.warning(f"Error creating handle {key}: {e}")
     
     def _create_rotation_handles(self):
-        """Create rotation handles at corners."""
+        """Create rotation handles at corners with proper parenting."""
         # Rotation handles at all 4 corners
-        # Note: These are created as children but will be positioned in scene coordinates
+        # Parent them to the handler to avoid scene management issues
         corner_keys = ['rot_tl', 'rot_tr', 'rot_bl', 'rot_br']
         
         for key in corner_keys:
             try:
                 handle = TransformHandle(
-                    self._rotation_cursor, None, is_rotation_handle=True  # No parent initially
+                    self._rotation_cursor, self, is_rotation_handle=True
                 )
                 self._rotation_handles[key] = handle
             except Exception as e:
                 logger.warning(f"Error creating rotation handle {key}: {e}")
+    
+    def _create_corner_radius_handles(self):
+        """Create corner radius handles for rounded rectangle adjustment with proper parenting."""
+        # Corner radius handles: 0=TL, 1=TR, 2=BR, 3=BL
+        # Parent them to the handler instead of leaving them unparented
+        corner_keys = ['cr_tl', 'cr_tr', 'cr_br', 'cr_bl']
+        
+        for idx, key in enumerate(corner_keys):
+            try:
+                handle = CornerRadiusHandle(idx, self)  # Parent to handler
+                self._corner_radius_handles[key] = handle
+            except Exception as e:
+                logger.warning(f"Error creating corner radius handle {key}: {e}")
     
     def is_valid(self):
         """Check if handler is still valid."""
@@ -230,7 +282,14 @@ class BaseTransformHandler(QGraphicsItem):
         if not self._is_valid:
             return None
         
-        # Check rotation handles first (they are on top)
+        # Check corner radius handles first (highest priority when enabled)
+        if self._corner_radius_mode_enabled:
+            for item in items:
+                for name, handle in self._corner_radius_handles.items():
+                    if item == handle and handle.isVisible():
+                        return name
+        
+        # Check rotation handles next (they are on top)
         for item in items:
             for name, handle in self._rotation_handles.items():
                 if item == handle:
@@ -247,16 +306,30 @@ class BaseTransformHandler(QGraphicsItem):
         """Check if a handle name is a rotation handle."""
         return handle_name and handle_name.startswith('rot_')
     
+    def is_corner_radius_handle(self, handle_name):
+        """Check if a handle name is a corner radius handle."""
+        return handle_name and handle_name.startswith('cr_')
+    
     def handle_mouse_press(self, handle_name, pos, scene_pos):
         """Called when a handle is pressed."""
         self._drag_mode = handle_name
         
-        if self.is_rotation_handle(handle_name):
+        if self.is_corner_radius_handle(handle_name):
+            self._is_adjusting_corner_radius = True
+            self._is_rotating = False
+            self._is_resizing = False
+            self._corner_drag_start_pos = QPointF(scene_pos)
+            # Extract corner index from handle name (cr_tl=0, cr_tr=1, cr_br=2, cr_bl=3)
+            corner_map = {'cr_tl': 0, 'cr_tr': 1, 'cr_br': 2, 'cr_bl': 3}
+            self._active_corner_index = corner_map.get(handle_name, -1)
+        elif self.is_rotation_handle(handle_name):
             self._is_rotating = True
             self._is_resizing = False
+            self._is_adjusting_corner_radius = False
         else:
             self._is_resizing = True
             self._is_rotating = False
+            self._is_adjusting_corner_radius = False
     
     def handle_mouse_move(self, scene_pos, modifiers=Qt.KeyboardModifier.NoModifier):
         """Logic to resize/transform based on handle movement."""
@@ -266,28 +339,34 @@ class BaseTransformHandler(QGraphicsItem):
         """Called when the mouse is released after a transform."""
         self._is_resizing = False
         self._is_rotating = False
+        self._is_adjusting_corner_radius = False
+        self._active_corner_index = -1
         self._drag_mode = None
 
     def cleanup(self):
         """Clean up resources safely."""
         try:
             if self.scene() and self.scene_ref and self.scene() == self.scene_ref:
+                # Remove self (which removes parented items automatically)
                 self.scene_ref.removeItem(self)
-                
-                # Also remove rotation handles from scene
-                for handle in self._rotation_handles.values():
-                    try:
-                        if handle and handle.scene():
-                            handle.scene().removeItem(handle)
-                    except Exception as e:
-                        logger.debug(f"Error removing rotation handle: {e}")
         except Exception as e:
-            logger.warning(f"Error during handler cleanup: {e}")
+            logger.debug(f"Error during handler cleanup: {e}")
         finally:
             self._is_valid = False
             self._handles.clear()
             self._rotation_handles.clear()
+            self._corner_radius_handles.clear()
             self.scene_ref = None
+    
+    def set_corner_radius_mode(self, enabled):
+        """Enable or disable corner radius adjustment mode."""
+        self._corner_radius_mode_enabled = enabled
+        self._update_corner_radius_handles_visibility()
+    
+    def _update_corner_radius_handles_visibility(self):
+        """Update visibility of corner radius handles based on mode and target item type."""
+        # Override in subclasses to check if target item supports corner radius
+        pass
 
 
 class TransformHandler(BaseTransformHandler):
@@ -395,22 +474,24 @@ class TransformHandler(BaseTransformHandler):
                 h['bl'].setPos(rect.bottomLeft())
                 h['l'].setPos(QPointF(rect.left(), rect.center().y()))
                 
-                # Update rotation handle positions in SCENE coordinates
-                # Map the corners to scene coordinates and offset from there
+                # Update rotation handle positions in LOCAL coordinates of handler
+                # Since handles are now parented to the handler, they move/rotate WITH it
                 offset = self.ROTATION_HANDLE_OFFSET
                 rh = self._rotation_handles
                 
-                # Get the 4 corners in scene coordinates
-                tl_scene = self.target_item.mapToScene(rect.topLeft())
-                tr_scene = self.target_item.mapToScene(rect.topRight())
-                bl_scene = self.target_item.mapToScene(rect.bottomLeft())
-                br_scene = self.target_item.mapToScene(rect.bottomRight())
+                # Get the 4 corners in LOCAL coordinates (relative to handler)
+                # The handler's local coords ARE the same as the target's local coords
+                # since the handler is positioned/rotated to match the target
+                tl_local = rect.topLeft()
+                tr_local = rect.topRight()
+                bl_local = rect.bottomLeft()
+                br_local = rect.bottomRight()
                 
                 # Calculate the direction vectors for offset (diagonal outward from center)
-                center_scene = self.target_item.mapToScene(rect.center())
+                center_local = rect.center()
                 
-                # Offset each corner diagonally away from center
-                def offset_from_center(corner, center, offset_dist):
+                # Offset each corner diagonally away from center (in local space)
+                def offset_from_center_local(corner, center, offset_dist):
                     dx = corner.x() - center.x()
                     dy = corner.y() - center.y()
                     length = math.sqrt(dx * dx + dy * dy)
@@ -419,21 +500,69 @@ class TransformHandler(BaseTransformHandler):
                         dy /= length
                     return QPointF(corner.x() + dx * offset_dist, corner.y() + dy * offset_dist)
                 
-                rh['rot_tl'].setPos(offset_from_center(tl_scene, center_scene, offset))
-                rh['rot_tr'].setPos(offset_from_center(tr_scene, center_scene, offset))
-                rh['rot_bl'].setPos(offset_from_center(bl_scene, center_scene, offset))
-                rh['rot_br'].setPos(offset_from_center(br_scene, center_scene, offset))
+                # Position in local coordinates - rotation automatically handled by parent
+                rh['rot_tl'].setPos(offset_from_center_local(tl_local, center_local, offset))
+                rh['rot_tr'].setPos(offset_from_center_local(tr_local, center_local, offset))
+                rh['rot_bl'].setPos(offset_from_center_local(bl_local, center_local, offset))
+                rh['rot_br'].setPos(offset_from_center_local(br_local, center_local, offset))
                 
                 # Make sure rotation handles are visible
                 for handle in self._rotation_handles.values():
                     if handle:
                         handle.setVisible(True)
+                
+                # Update corner radius handle positions (inside corners)
+                self._update_corner_radius_handle_positions(rect, tl_local, tr_local, br_local, bl_local)
             
             self.prepareGeometryChange()
             self.update()
         except Exception as e:
             logger.error(f"Error updating transform handler geometry: {e}")
             self._is_valid = False
+    
+    def _update_corner_radius_handle_positions(self, rect, tl_local, tr_local, br_local, bl_local):
+        """Update positions of corner radius handles in LOCAL coordinates."""
+        if not self._corner_radius_handles:
+            return
+        
+        crh = self._corner_radius_handles
+        offset = self.CORNER_RADIUS_HANDLE_OFFSET
+        
+        # Get current corner radii if target supports it
+        corner_radii = [0, 0, 0, 0]
+        if isinstance(self.target_item, RectangleObject):
+            corner_radii = self.target_item.corner_radii
+        
+        # Position handles at each corner in LOCAL coordinates (no rotation needed - parent handles it)
+        # TL corner - offset inward
+        tl_offset = max(corner_radii[0], offset)
+        crh['cr_tl'].setPos(tl_local.x() + tl_offset, tl_local.y() + tl_offset)
+        
+        # TR corner - offset inward
+        tr_offset = max(corner_radii[1], offset)
+        crh['cr_tr'].setPos(tr_local.x() - tr_offset, tr_local.y() + tr_offset)
+        
+        # BR corner - offset inward
+        br_offset = max(corner_radii[2], offset)
+        crh['cr_br'].setPos(br_local.x() - br_offset, br_local.y() - br_offset)
+        
+        # BL corner - offset inward
+        bl_offset = max(corner_radii[3], offset)
+        crh['cr_bl'].setPos(bl_local.x() + bl_offset, bl_local.y() - bl_offset)
+    
+    def _update_corner_radius_handles_visibility(self):
+        """Update visibility of corner radius handles based on mode and target item type."""
+        # Only show corner radius handles for RectangleObject when mode is enabled
+        show_handles = (self._corner_radius_mode_enabled and 
+                       isinstance(self.target_item, RectangleObject))
+        
+        for handle in self._corner_radius_handles.values():
+            if handle:
+                handle.setVisible(show_handles)
+        
+        # Also enable rounded mode on the item if it's a RectangleObject
+        if isinstance(self.target_item, RectangleObject):
+            self.target_item.rounded_enabled = self._corner_radius_mode_enabled
 
     def handle_mouse_press(self, handle_name, pos, scene_pos):
         """Called when a handle is pressed."""
@@ -481,8 +610,9 @@ class TransformHandler(BaseTransformHandler):
                     elif handle_name == 'r':
                         anchor_local = QPointF(rect.left(), rect.center().y())
                     
-                    # Map anchor to scene coordinates
-                    self._anchor_scene_pos = self.target_item.mapToScene(anchor_local)
+                    # Map anchor to scene coordinates and round to prevent fractional propagation
+                    anchor_scene = self.target_item.mapToScene(anchor_local)
+                    self._anchor_scene_pos = QPointF(round(anchor_scene.x()), round(anchor_scene.y()))
                 
                 # For rotation, store initial rotation and calculate center
                 if self.is_rotation_handle(handle_name):
@@ -495,6 +625,13 @@ class TransformHandler(BaseTransformHandler):
                     dx = scene_pos.x() - self._rotation_center.x()
                     dy = scene_pos.y() - self._rotation_center.y()
                     self._rotation_start_angle = math.degrees(math.atan2(dy, dx))
+                
+                # For corner radius, store initial corner radii
+                if self.is_corner_radius_handle(handle_name):
+                    if isinstance(self.target_item, RectangleObject):
+                        self._initial_corner_radii = self.target_item.corner_radii.copy()
+                    else:
+                        self._initial_corner_radii = [0.0, 0.0, 0.0, 0.0]
                     
         except Exception as e:
             logger.warning(f"Error storing initial rect: {e}")
@@ -505,6 +642,11 @@ class TransformHandler(BaseTransformHandler):
             return
 
         if not isinstance(self.target_item, BaseGraphicObject):
+            return
+        
+        # Handle corner radius adjustment
+        if self._is_adjusting_corner_radius:
+            self._handle_corner_radius(scene_pos, modifiers)
             return
         
         # Handle rotation
@@ -581,57 +723,184 @@ class TransformHandler(BaseTransformHandler):
             new_geometry = QRectF(0, 0, snapped_width, snapped_height)
             
             # Calculate new transform origin (center of new geometry)
-            new_center = new_geometry.center()
+            # Use integer division to avoid .5 fractional values that cause rounding inconsistencies
+            new_center_x = snapped_width // 2
+            new_center_y = snapped_height // 2
+            new_center = QPointF(new_center_x, new_center_y)
             
-            # Determine anchor point in the NEW local rect based on handle
-            new_anchor_local = QPointF()
-            if self._drag_mode == 'tl':
-                new_anchor_local = new_geometry.bottomRight()
-            elif self._drag_mode == 'tr':
-                new_anchor_local = new_geometry.bottomLeft()
-            elif self._drag_mode == 'bl':
-                new_anchor_local = new_geometry.topRight()
-            elif self._drag_mode == 'br':
-                new_anchor_local = new_geometry.topLeft()
-            elif self._drag_mode == 't':
-                new_anchor_local = QPointF(new_geometry.center().x(), new_geometry.bottom())
-            elif self._drag_mode == 'b':
-                new_anchor_local = QPointF(new_geometry.center().x(), new_geometry.top())
-            elif self._drag_mode == 'l':
-                new_anchor_local = QPointF(new_geometry.right(), new_geometry.center().y())
-            elif self._drag_mode == 'r':
-                new_anchor_local = QPointF(new_geometry.left(), new_geometry.center().y())
+            # For non-rotated objects, preserve fixed coordinates based on handle type
+            # This prevents position flickering caused by rounding errors
+            is_rotated = abs(self._initial_rotation) > 0.001
             
-            # Calculate position so anchor stays fixed in scene
-            # We need to find the position where the new_anchor_local maps to _anchor_scene_pos
-            # after rotation around new_center
+            if not is_rotated:
+                # For non-rotated objects, directly calculate position based on handle
+                # Right, Bottom, BottomRight: X and Y should NOT change
+                # Left, BottomLeft: Y should NOT change  
+                # Top, TopRight: X should NOT change
+                # TopLeft: both X and Y can change
+                
+                initial_x = round(self._initial_pos.x())
+                initial_y = round(self._initial_pos.y())
+                
+                if self._drag_mode in ['r', 'b', 'br']:
+                    # Anchor is at top-left area, position should not change
+                    new_pos_x = initial_x
+                    new_pos_y = initial_y
+                elif self._drag_mode == 'l':
+                    # Dragging left edge: X changes, Y stays fixed
+                    # New X = anchor_right - new_width
+                    new_pos_x = round(self._anchor_scene_pos.x()) - snapped_width
+                    new_pos_y = initial_y
+                elif self._drag_mode == 'bl':
+                    # Dragging bottom-left: X changes, Y stays fixed
+                    new_pos_x = round(self._anchor_scene_pos.x()) - snapped_width
+                    new_pos_y = initial_y
+                elif self._drag_mode == 't':
+                    # Dragging top edge: Y changes, X stays fixed
+                    new_pos_x = initial_x
+                    new_pos_y = round(self._anchor_scene_pos.y()) - snapped_height
+                elif self._drag_mode == 'tr':
+                    # Dragging top-right: Y changes, X stays fixed
+                    new_pos_x = initial_x
+                    new_pos_y = round(self._anchor_scene_pos.y()) - snapped_height
+                elif self._drag_mode == 'tl':
+                    # Dragging top-left: both X and Y change
+                    new_pos_x = round(self._anchor_scene_pos.x()) - snapped_width
+                    new_pos_y = round(self._anchor_scene_pos.y()) - snapped_height
+                else:
+                    new_pos_x = initial_x
+                    new_pos_y = initial_y
+            else:
+                # For rotated objects, use the full anchor-based calculation
+                # Determine anchor point in the NEW local rect based on handle
+                new_anchor_local = QPointF()
+                if self._drag_mode == 'tl':
+                    new_anchor_local = new_geometry.bottomRight()
+                elif self._drag_mode == 'tr':
+                    new_anchor_local = new_geometry.bottomLeft()
+                elif self._drag_mode == 'bl':
+                    new_anchor_local = new_geometry.topRight()
+                elif self._drag_mode == 'br':
+                    new_anchor_local = new_geometry.topLeft()
+                elif self._drag_mode == 't':
+                    new_anchor_local = QPointF(new_center_x, new_geometry.bottom())
+                elif self._drag_mode == 'b':
+                    new_anchor_local = QPointF(new_center_x, new_geometry.top())
+                elif self._drag_mode == 'l':
+                    new_anchor_local = QPointF(new_geometry.right(), new_center_y)
+                elif self._drag_mode == 'r':
+                    new_anchor_local = QPointF(new_geometry.left(), new_center_y)
+                
+                # Calculate position so anchor stays fixed in scene
+                # Vector from new center to anchor in local space
+                anchor_from_center_x = new_anchor_local.x() - new_center_x
+                anchor_from_center_y = new_anchor_local.y() - new_center_y
+                
+                # Rotate this vector to scene space (positive rotation)
+                cos_r_pos = math.cos(rotation_rad)
+                sin_r_pos = math.sin(rotation_rad)
+                rotated_anchor_x = anchor_from_center_x * cos_r_pos - anchor_from_center_y * sin_r_pos
+                rotated_anchor_y = anchor_from_center_x * sin_r_pos + anchor_from_center_y * cos_r_pos
+                
+                # The anchor in scene = pos + new_center + rotated_anchor_offset
+                # So: pos = anchor_scene - new_center - rotated_anchor_offset
+                new_pos_x = self._anchor_scene_pos.x() - new_center_x - rotated_anchor_x
+                new_pos_y = self._anchor_scene_pos.y() - new_center_y - rotated_anchor_y
             
-            # Vector from new center to anchor in local space
-            anchor_from_center_x = new_anchor_local.x() - new_center.x()
-            anchor_from_center_y = new_anchor_local.y() - new_center.y()
-            
-            # Rotate this vector to scene space (positive rotation)
-            cos_r_pos = math.cos(rotation_rad)
-            sin_r_pos = math.sin(rotation_rad)
-            rotated_anchor_x = anchor_from_center_x * cos_r_pos - anchor_from_center_y * sin_r_pos
-            rotated_anchor_y = anchor_from_center_x * sin_r_pos + anchor_from_center_y * cos_r_pos
-            
-            # The anchor in scene = pos + new_center + rotated_anchor_offset
-            # So: pos = anchor_scene - new_center - rotated_anchor_offset
-            new_pos_x = self._anchor_scene_pos.x() - new_center.x() - rotated_anchor_x
-            new_pos_y = self._anchor_scene_pos.y() - new_center.y() - rotated_anchor_y
-            
-            # Apply all changes
+            # Apply all changes with batching to prevent intermediate snap intercepts
             self.prepareGeometryChange()
-            self.target_item.set_geometry(new_geometry)
-            self.target_item.setTransformOriginPoint(new_center)
-            self.target_item.setPos(round(new_pos_x), round(new_pos_y))
+            try:
+                self.target_item.set_transform_in_progress(True)
+                self.target_item.set_geometry(new_geometry)
+                self.target_item.setTransformOriginPoint(new_center)
+                self.target_item.setPos(round(new_pos_x), round(new_pos_y))
+            finally:
+                self.target_item.set_transform_in_progress(False)
             
             self.update_geometry()
             logger.debug("Successfully handled mouse move for single item.")
 
         except Exception as e:
             logger.error(f"CRITICAL: Exception in TransformHandler.handle_mouse_move: {e}", exc_info=True)
+
+    def _handle_corner_radius(self, scene_pos, modifiers=Qt.KeyboardModifier.NoModifier):
+        """Handle corner radius adjustment for rounded rectangles."""
+        try:
+            if not isinstance(self.target_item, RectangleObject):
+                return
+            
+            # Get the rect and corner positions
+            rect = self.target_item.boundingRect()
+            
+            # Get corner position in scene coordinates
+            corner_map = {
+                0: rect.topLeft(),      # TL
+                1: rect.topRight(),     # TR
+                2: rect.bottomRight(),  # BR
+                3: rect.bottomLeft()    # BL
+            }
+            
+            if self._active_corner_index < 0 or self._active_corner_index > 3:
+                return
+            
+            corner_local = corner_map[self._active_corner_index]
+            corner_scene = self.target_item.mapToScene(corner_local)
+            
+            # Calculate distance from corner to current mouse position
+            dx = scene_pos.x() - corner_scene.x()
+            dy = scene_pos.y() - corner_scene.y()
+            
+            # Account for object rotation by rotating the drag vector back to local space
+            rotation_angle = self.target_item.rotation() if isinstance(self.target_item, BaseGraphicObject) else 0
+            rotation_rad = math.radians(rotation_angle)
+            cos_r = math.cos(-rotation_rad)  # Negative to rotate back
+            sin_r = math.sin(-rotation_rad)
+            
+            # Rotate the drag vector to local coordinates
+            dx_local = dx * cos_r - dy * sin_r
+            dy_local = dx * sin_r + dy * cos_r
+            
+            # Direction multipliers based on corner (in local space)
+            # TL: inward is +x, +y  |  TR: inward is -x, +y
+            # BR: inward is -x, -y  |  BL: inward is +x, -y
+            dir_mult = {
+                0: (1, 1),    # TL
+                1: (-1, 1),   # TR
+                2: (-1, -1),  # BR
+                3: (1, -1)    # BL
+            }
+            
+            mult_x, mult_y = dir_mult[self._active_corner_index]
+            
+            # Calculate the inward distance (positive when dragging inside)
+            inward_x = dx_local * mult_x
+            inward_y = dy_local * mult_y
+            
+            # Use the minimum of x and y as the radius (to keep it symmetric per corner)
+            radius = max(0, min(inward_x, inward_y))
+            
+            # Clamp to half the smallest dimension
+            max_radius = min(rect.width(), rect.height()) / 2.0
+            radius = min(radius, max_radius)
+            
+            # Apply to corner(s) based on Shift modifier
+            if modifiers & Qt.KeyboardModifier.ShiftModifier:
+                # Shift held: apply same radius to all corners
+                self.target_item.set_all_corner_radii(radius)
+            else:
+                # No Shift: only adjust the active corner
+                self.target_item.set_corner_radius(self._active_corner_index, radius)
+            
+            # Update handler geometry to reposition handles
+            self.update_geometry()
+            
+            logger.debug(f"Corner radius applied: corner={self._active_corner_index}, radius={radius}")
+            
+        except Exception as e:
+            logger.error(f"Error handling corner radius: {e}", exc_info=True)
+            
+        except Exception as e:
+            logger.error(f"Error handling corner radius: {e}", exc_info=True)
 
     def _handle_rotation(self, scene_pos, modifiers=Qt.KeyboardModifier.NoModifier):
         """Handle rotation of the target item around its center."""
@@ -858,17 +1127,30 @@ class AverageTransformHandler(BaseTransformHandler):
                 h['bl'].setPos(local_rect.bottomLeft())
                 h['l'].setPos(QPointF(local_rect.left(), local_rect.center().y()))
                 
-                # Update rotation handle positions in SCENE coordinates
-                # For AverageTransformHandler, the handler is not rotated, so we can use
-                # the average_rect directly (it's already in scene coordinates)
+                # Update rotation handle positions in LOCAL coordinates
+                # For AverageTransformHandler, the handler is not rotated
+                # So local coords = relative to handler position
                 offset = self.ROTATION_HANDLE_OFFSET
                 rh = self._rotation_handles
                 
-                # Position rotation handles at corners with diagonal offset
-                rh['rot_tl'].setPos(QPointF(self._average_rect.left() - offset, self._average_rect.top() - offset))
-                rh['rot_tr'].setPos(QPointF(self._average_rect.right() + offset, self._average_rect.top() - offset))
-                rh['rot_bl'].setPos(QPointF(self._average_rect.left() - offset, self._average_rect.bottom() + offset))
-                rh['rot_br'].setPos(QPointF(self._average_rect.right() + offset, self._average_rect.bottom() + offset))
+                # Position rotation handles at corners with diagonal offset (in local space)
+                local_rect = QRectF(0, 0, self._average_rect.width(), self._average_rect.height())
+                center_local = local_rect.center()
+                
+                # Offset outward from center for each corner
+                def offset_from_center(corner, center, offset_dist):
+                    dx = corner.x() - center.x()
+                    dy = corner.y() - center.y()
+                    length = math.sqrt(dx * dx + dy * dy)
+                    if length > 0:
+                        dx /= length
+                        dy /= length
+                    return QPointF(corner.x() + dx * offset_dist, corner.y() + dy * offset_dist)
+                
+                rh['rot_tl'].setPos(offset_from_center(local_rect.topLeft(), center_local, offset))
+                rh['rot_tr'].setPos(offset_from_center(local_rect.topRight(), center_local, offset))
+                rh['rot_bl'].setPos(offset_from_center(local_rect.bottomLeft(), center_local, offset))
+                rh['rot_br'].setPos(offset_from_center(local_rect.bottomRight(), center_local, offset))
                 
                 # Make sure rotation handles are visible
                 for handle in self._rotation_handles.values():
@@ -926,7 +1208,8 @@ class AverageTransformHandler(BaseTransformHandler):
         
         try:
             new_rect = QRectF(self._initial_avg_rect)
-            snapped_pos = scene_pos
+            # Round scene position to prevent fractional accumulation
+            snapped_pos = QPointF(round(scene_pos.x()), round(scene_pos.y()))
             
             if 'r' in str(self._drag_mode): new_rect.setRight(snapped_pos.x())
             if 'l' in str(self._drag_mode): new_rect.setLeft(snapped_pos.x())
@@ -937,8 +1220,8 @@ class AverageTransformHandler(BaseTransformHandler):
             
             old_width = self._initial_avg_rect.width()
             old_height = self._initial_avg_rect.height()
-            new_width = new_rect.width()
-            new_height = new_rect.height()
+            new_width = round(new_rect.width())
+            new_height = round(new_rect.height())
             
             if old_width < 1 or old_height < 1 or new_width < 1 or new_height < 1:
                 return
@@ -946,27 +1229,79 @@ class AverageTransformHandler(BaseTransformHandler):
             scale_x = new_width / old_width
             scale_y = new_height / old_height
             
-            for item_id, (initial_rect, item) in self._initial_rects.items():
-                try:
+            # Determine which coordinates should be preserved based on handle type
+            # This prevents position flickering caused by rounding errors
+            drag_mode = str(self._drag_mode)
+            preserve_x = drag_mode in ['r', 'b', 'br', 't', 'tr']  # X should not change
+            preserve_y = drag_mode in ['r', 'b', 'br', 'l', 'bl']  # Y should not change
+            
+            # Calculate new rect position based on handle
+            # For r, b, br: top-left stays fixed
+            # For l, bl: top-right stays fixed (X changes)
+            # For t, tr: bottom-left stays fixed (Y changes)
+            # For tl: bottom-right stays fixed (both change)
+            new_rect_left = round(self._initial_avg_rect.left()) if preserve_x else round(new_rect.left())
+            new_rect_top = round(self._initial_avg_rect.top()) if preserve_y else round(new_rect.top())
+            
+            # Batch transform operations to prevent snap intercepts
+            for item in self.target_items:
+                if isinstance(item, BaseGraphicObject) and item.scene():
+                    item.set_transform_in_progress(True)
+            
+            try:
+                for item_id, (initial_rect, item) in self._initial_rects.items():
+                    try:
+                        if isinstance(item, BaseGraphicObject) and item.scene():
+                            scaled_width = round(initial_rect.width() * scale_x)
+                            scaled_height = round(initial_rect.height() * scale_y)
+                            
+                            if scaled_width < 1 or scaled_height < 1: continue
+                            
+                            new_item_rect = QRectF(0, 0, scaled_width, scaled_height)
+                            item.set_geometry(new_item_rect)
+                            
+                            # Set transform origin to integer center
+                            new_center_x = scaled_width // 2
+                            new_center_y = scaled_height // 2
+                            item.setTransformOriginPoint(QPointF(new_center_x, new_center_y))
+                            
+                            initial_pos, _ = self._initial_positions.get(item_id, (QPointF(0, 0), None))
+                            
+                            # Calculate position based on whether coordinates should be preserved
+                            if preserve_x and preserve_y:
+                                # Both X and Y preserved (r, b, br handles)
+                                # Position stays relative to initial avg rect top-left
+                                offset_x = initial_pos.x() - self._initial_avg_rect.left()
+                                offset_y = initial_pos.y() - self._initial_avg_rect.top()
+                                new_x = new_rect_left + offset_x * scale_x
+                                new_y = new_rect_top + offset_y * scale_y
+                            elif preserve_y:
+                                # Only Y preserved (l, bl handles)
+                                offset_x = initial_pos.x() - self._initial_avg_rect.left()
+                                offset_y = initial_pos.y() - self._initial_avg_rect.top()
+                                new_x = new_rect_left + offset_x * scale_x
+                                new_y = new_rect_top + offset_y * scale_y
+                            elif preserve_x:
+                                # Only X preserved (t, tr handles)
+                                offset_x = initial_pos.x() - self._initial_avg_rect.left()
+                                offset_y = initial_pos.y() - self._initial_avg_rect.top()
+                                new_x = new_rect_left + offset_x * scale_x
+                                new_y = new_rect_top + offset_y * scale_y
+                            else:
+                                # Neither preserved (tl handle)
+                                offset_x = initial_pos.x() - self._initial_avg_rect.left()
+                                offset_y = initial_pos.y() - self._initial_avg_rect.top()
+                                new_x = new_rect_left + offset_x * scale_x
+                                new_y = new_rect_top + offset_y * scale_y
+                            
+                            item.setPos(round(new_x), round(new_y))
+                    except Exception as e:
+                        logger.debug(f"Error transforming item: {e}")
+            finally:
+                # Clear the batching flag
+                for item in self.target_items:
                     if isinstance(item, BaseGraphicObject) and item.scene():
-                        scaled_width = round(initial_rect.width() * scale_x)
-                        scaled_height = round(initial_rect.height() * scale_y)
-                        
-                        if scaled_width < 1 or scaled_height < 1: continue
-                        
-                        new_item_rect = QRectF(0, 0, scaled_width, scaled_height)
-                        item.set_geometry(new_item_rect)
-                        
-                        initial_pos, _ = self._initial_positions.get(item_id, (QPointF(0, 0), None))
-                        offset_x = initial_pos.x() - self._initial_avg_rect.left()
-                        offset_y = initial_pos.y() - self._initial_avg_rect.top()
-                        
-                        new_x = new_rect.left() + offset_x * scale_x
-                        new_y = new_rect.top() + offset_y * scale_y
-                        
-                        item.setPos(round(new_x), round(new_y))
-                except Exception as e:
-                    logger.debug(f"Error transforming item: {e}")
+                        item.set_transform_in_progress(False)
             
             self.update_geometry()
         except Exception as e:
@@ -987,56 +1322,67 @@ class AverageTransformHandler(BaseTransformHandler):
             if modifiers & Qt.KeyboardModifier.ShiftModifier:
                 angle_delta = round(angle_delta / 15) * 15
             
-            # Apply rotation to each item
-            for item_id, (initial_rotation, item) in self._initial_rotations.items():
-                try:
+            # Batch transform operations to prevent snap intercepts during rotation
+            for item in self.target_items:
+                if isinstance(item, BaseGraphicObject) and item.scene():
+                    item.set_transform_in_progress(True)
+            
+            try:
+                # Apply rotation to each item
+                for item_id, (initial_rotation, item) in self._initial_rotations.items():
+                    try:
+                        if isinstance(item, BaseGraphicObject) and item.scene():
+                            # Get initial position
+                            initial_pos, _ = self._initial_positions.get(item_id, (QPointF(0, 0), None))
+                            
+                            # Calculate new rotation
+                            new_rotation = initial_rotation + angle_delta
+                            
+                            # Normalize angle
+                            while new_rotation > 360:
+                                new_rotation -= 360
+                            while new_rotation < -360:
+                                new_rotation += 360
+                            
+                            # Calculate item center in scene coordinates
+                            initial_rect, _ = self._initial_rects.get(item_id, (QRectF(), None))
+                            item_center = QPointF(
+                                initial_pos.x() + initial_rect.width() / 2,
+                                initial_pos.y() + initial_rect.height() / 2
+                            )
+                            
+                            # Rotate item position around the group center
+                            angle_rad = math.radians(angle_delta)
+                            cos_a = math.cos(angle_rad)
+                            sin_a = math.sin(angle_rad)
+                            
+                            # Translate to origin (center), rotate, translate back
+                            rel_x = item_center.x() - self._rotation_center.x()
+                            rel_y = item_center.y() - self._rotation_center.y()
+                            
+                            new_center_x = self._rotation_center.x() + (rel_x * cos_a - rel_y * sin_a)
+                            new_center_y = self._rotation_center.y() + (rel_x * sin_a + rel_y * cos_a)
+                            
+                            # Calculate new position (top-left corner)
+                            new_x = new_center_x - initial_rect.width() / 2
+                            new_y = new_center_y - initial_rect.height() / 2
+                            
+                            # Apply position and rotation in batch
+                            item.setPos(round(new_x), round(new_y))
+                            
+                            # Set transform origin to center and apply rotation
+                            rect = item.boundingRect()
+                            center = rect.center()
+                            item.setTransformOriginPoint(center)
+                            item.setRotation(new_rotation)
+                            
+                    except Exception as e:
+                        logger.debug(f"Error rotating item: {e}")
+            finally:
+                # Clear the batching flag for all items
+                for item in self.target_items:
                     if isinstance(item, BaseGraphicObject) and item.scene():
-                        # Get initial position
-                        initial_pos, _ = self._initial_positions.get(item_id, (QPointF(0, 0), None))
-                        
-                        # Calculate new rotation
-                        new_rotation = initial_rotation + angle_delta
-                        
-                        # Normalize angle
-                        while new_rotation > 360:
-                            new_rotation -= 360
-                        while new_rotation < -360:
-                            new_rotation += 360
-                        
-                        # Calculate item center in scene coordinates
-                        initial_rect, _ = self._initial_rects.get(item_id, (QRectF(), None))
-                        item_center = QPointF(
-                            initial_pos.x() + initial_rect.width() / 2,
-                            initial_pos.y() + initial_rect.height() / 2
-                        )
-                        
-                        # Rotate item position around the group center
-                        angle_rad = math.radians(angle_delta)
-                        cos_a = math.cos(angle_rad)
-                        sin_a = math.sin(angle_rad)
-                        
-                        # Translate to origin (center), rotate, translate back
-                        rel_x = item_center.x() - self._rotation_center.x()
-                        rel_y = item_center.y() - self._rotation_center.y()
-                        
-                        new_center_x = self._rotation_center.x() + (rel_x * cos_a - rel_y * sin_a)
-                        new_center_y = self._rotation_center.y() + (rel_x * sin_a + rel_y * cos_a)
-                        
-                        # Calculate new position (top-left corner)
-                        new_x = new_center_x - initial_rect.width() / 2
-                        new_y = new_center_y - initial_rect.height() / 2
-                        
-                        # Apply position
-                        item.setPos(round(new_x), round(new_y))
-                        
-                        # Set transform origin to center and apply rotation
-                        rect = item.boundingRect()
-                        center = rect.center()
-                        item.setTransformOriginPoint(center)
-                        item.setRotation(new_rotation)
-                        
-                except Exception as e:
-                    logger.debug(f"Error rotating item: {e}")
+                        item.set_transform_in_progress(False)
             
             self.update_geometry()
             logger.debug(f"Group rotation applied: {angle_delta}°")

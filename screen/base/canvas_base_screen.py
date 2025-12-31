@@ -239,6 +239,13 @@ class CanvasBaseScreen(QGraphicsView):
                     rect = item.boundingRect()
                     item_data['rect'] = [rect.x(), rect.y(), rect.width(), rect.height()]
                     item_data['pos'] = [item.pos().x(), item.pos().y()]
+                    
+                    # Save corner radii for rectangles
+                    if hasattr(item, 'corner_radii'):
+                        item_data['corner_radii'] = item.corner_radii
+                    if hasattr(item, 'rounded_enabled'):
+                        item_data['rounded_enabled'] = item.rounded_enabled
+                    
                     items_list.append(item_data)
 
             self.screen_data['items'] = items_list
@@ -262,6 +269,10 @@ class CanvasBaseScreen(QGraphicsView):
         
         if item_type == 'rectangle':
             item = RectangleObject(rect, self.view_service, self)
+            # Restore corner radii if present
+            corner_radii = data.get('corner_radii', [0.0, 0.0, 0.0, 0.0])
+            item.corner_radii = corner_radii
+            item.rounded_enabled = data.get('rounded_enabled', False)
         elif item_type == 'ellipse':
             item = EllipseObject(rect, self.view_service, self)
         
@@ -358,7 +369,9 @@ class CanvasBaseScreen(QGraphicsView):
             'type': item_type,
             'rect': [0, 0, width, height],
             'pos': [scene_top_left.x(), scene_top_left.y()],
-            'tag': ''
+            'tag': '',
+            'corner_radii': [0.0, 0.0, 0.0, 0.0],  # [TL, TR, BR, BL]
+            'rounded_enabled': False
         }
         
         # Use AddItemCommand for undo support

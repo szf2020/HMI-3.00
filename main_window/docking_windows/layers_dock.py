@@ -400,6 +400,24 @@ class LayersDock(QDockWidget):
         self.opacity_slider.blockSignals(False)
         self._apply_opacity_to_selected(value)
     
+    def set_opacity_ui(self, value):
+        """Set opacity UI and item data without triggering signals (for external sync).
+        
+        Args:
+            value: Opacity value (0-100 as integer percentage)
+        """
+        self.opacity_slider.blockSignals(True)
+        self.opacity_spinbox.blockSignals(True)
+        self.opacity_slider.setValue(value)
+        self.opacity_spinbox.setValue(value)
+        self.opacity_slider.blockSignals(False)
+        self.opacity_spinbox.blockSignals(False)
+        
+        # Also update the stored opacity value in selected tree items
+        selected = self.tree_widget.selectedItems()
+        for item in selected:
+            item.setData(0, Qt.ItemDataRole.UserRole + 13, value)
+    
     def _apply_opacity_to_selected(self, value):
         """Apply opacity to selected layers."""
         selected = self.tree_widget.selectedItems()
@@ -853,6 +871,10 @@ class LayersDock(QDockWidget):
         
         # Add as a layer with live preview
         item = self.tree_widget.add_layer_item(None, obj_name, is_group=False, canvas_obj=canvas_obj, object_id=obj_id)
+        
+        # Store the actual canvas object's opacity in the tree item
+        opacity_value = int(canvas_obj.opacity() * 100) if hasattr(canvas_obj, 'opacity') else 100
+        item.setData(0, Qt.ItemDataRole.UserRole + 13, opacity_value)
         
         # Store bidirectional mapping
         self.object_to_item_map[id(canvas_obj)] = item

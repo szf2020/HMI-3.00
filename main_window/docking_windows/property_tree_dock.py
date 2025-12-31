@@ -404,8 +404,8 @@ class StyleTab(QWidget):
         presets_layout.setSpacing(2)
         
         self.preset_colors = [
-            "#FFFFFF", "#FFF9E6", "#E6F5FF", "#F0E6FF",
-            "#E6FFE6", "#FFE6E6", "#FFFACD", "#E6E6FA"
+            "#FFFFFF", "#FFD754", "#6AC2FD", "#9752FF",
+            "#65FF65", "#FF6262", "#FFEE55", "#6161FF"
         ]
         self.preset_buttons = []
         for color in self.preset_colors:
@@ -425,7 +425,7 @@ class StyleTab(QWidget):
         
         # === Fill Section ===
         fill_layout = QHBoxLayout()
-        self.fill_checkbox = QCheckBox("Fill")
+        self.fill_checkbox = QCheckBox("Fill  ")
         self.fill_checkbox.setChecked(True)
         self.fill_checkbox.stateChanged.connect(self._on_fill_checkbox_changed)
         fill_layout.addWidget(self.fill_checkbox)
@@ -438,33 +438,33 @@ class StyleTab(QWidget):
         # Eyedropper button
         self.eyedropper_btn = QToolButton()
         self.eyedropper_btn.setIcon(IconService.get_icon('edit-tool-eyedropper'))
-        self.eyedropper_btn.setFixedSize(24, 20)
         fill_layout.addWidget(self.eyedropper_btn)
         fill_layout.addStretch()
         
         layout.addLayout(fill_layout)
         
-        # === Line Section ===
+        # === Line Section (all controls in single row) ===
         line_layout = QHBoxLayout()
+        line_layout.setSpacing(8)
+        
         self.line_checkbox = QCheckBox("Line")
         self.line_checkbox.setChecked(True)
         self.line_checkbox.stateChanged.connect(self._on_line_changed)
         line_layout.addWidget(self.line_checkbox)
         
+        # Line style dropdown
+        self.line_style_combo = QComboBox()
+        self.line_style_combo.addItems(["Solid", "Dash", "Dot", "DashDot", "DashDotDot"])
+        self.line_style_combo.setFixedWidth(75)
+        self.line_style_combo.currentTextChanged.connect(self._on_line_style_changed)
+        line_layout.addWidget(self.line_style_combo)
+        
+        # Line color button
         self.line_color_btn = ColorPickerButton(QColor("black"))
         self.line_color_btn.color_changed.connect(self._on_line_color_changed)
         line_layout.addWidget(self.line_color_btn)
-        line_layout.addStretch()
-        layout.addLayout(line_layout)
         
-        # Line style row
-        line_style_layout = QHBoxLayout()
-        self.line_style_combo = QComboBox()
-        self.line_style_combo.addItems(["Solid", "Dash", "Dot", "DashDot", "DashDotDot"])
-        self.line_style_combo.setFixedWidth(80)
-        self.line_style_combo.currentTextChanged.connect(self._on_line_style_changed)
-        line_style_layout.addWidget(self.line_style_combo)
-        
+        # Line width spinbox
         self.line_width_spin = QDoubleSpinBox()
         self.line_width_spin.setRange(0.0, 50.0)
         self.line_width_spin.setValue(0.3)
@@ -472,13 +472,14 @@ class StyleTab(QWidget):
         self.line_width_spin.setSuffix(" mm")
         self.line_width_spin.setFixedWidth(70)
         self.line_width_spin.valueChanged.connect(self._on_line_width_changed)
-        line_style_layout.addWidget(self.line_width_spin)
-        line_style_layout.addStretch()
-        layout.addLayout(line_style_layout)
+        line_layout.addWidget(self.line_width_spin)
+        
+        line_layout.addStretch()
+        layout.addLayout(line_layout)
         
         # === Opacity Section ===
         opacity_layout = QHBoxLayout()
-        opacity_layout.addWidget(QLabel("Opacity"))
+        opacity_layout.addWidget(QLabel("Opacity  "))
         self.opacity_spin = QSpinBox()
         self.opacity_spin.setRange(0, 100)
         self.opacity_spin.setValue(100)
@@ -486,6 +487,16 @@ class StyleTab(QWidget):
         self.opacity_spin.setFixedWidth(60)
         self.opacity_spin.valueChanged.connect(self._on_opacity_changed)
         opacity_layout.addWidget(self.opacity_spin)
+        
+        # Opacity slider
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(0, 100)
+        self.opacity_slider.setValue(100)
+        self.opacity_slider.setFixedWidth(120)
+        self.opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
+        self.opacity_spin.valueChanged.connect(self.opacity_slider.setValue)
+        opacity_layout.addWidget(self.opacity_slider)
+        
         opacity_layout.addStretch()
         layout.addLayout(opacity_layout)
         
@@ -494,7 +505,7 @@ class StyleTab(QWidget):
         effects_layout.setSpacing(8)
         
         self.rounded_checkbox = QCheckBox("Rounded")
-        self.rounded_checkbox.stateChanged.connect(lambda s: self.rounded_changed.emit(s == Qt.CheckState.Checked.value))
+        self.rounded_checkbox.stateChanged.connect(self._on_rounded_checkbox_changed)
         effects_layout.addWidget(self.rounded_checkbox)
         
         self.shadow_checkbox = QCheckBox("Shadow")
@@ -504,6 +515,11 @@ class StyleTab(QWidget):
         effects_layout.addStretch()
         layout.addLayout(effects_layout)
         layout.addStretch()
+    
+    def _on_rounded_checkbox_changed(self, state):
+        """Handle rounded checkbox change - only emit if not syncing."""
+        if not self._syncing:
+            self.rounded_changed.emit(state == Qt.CheckState.Checked.value)
     
     def _on_preset_color_clicked(self, color):
         """Handle quick color preset selection."""
@@ -573,6 +589,24 @@ class StyleTab(QWidget):
         if not self._syncing:
             self.opacity_changed.emit(value / 100.0)
     
+    def _on_opacity_slider_changed(self, value):
+        """Handle opacity slider change - sync to spinbox."""
+        if self.opacity_spin.value() != value:
+            self.opacity_spin.setValue(value)
+    
+    def set_opacity_ui(self, value):
+        """Set opacity UI without triggering signals (for external sync).
+        
+        Args:
+            value: Opacity value (0-100 as integer percentage)
+        """
+        self._syncing = True
+        try:
+            self.opacity_spin.setValue(value)
+            self.opacity_slider.setValue(value)
+        finally:
+            self._syncing = False
+    
     def update_from_item(self, item):
         """Update UI from a selected item's properties."""
         self._syncing = True
@@ -607,6 +641,12 @@ class StyleTab(QWidget):
                 # Update opacity
                 opacity = item.opacity()
                 self.opacity_spin.setValue(int(opacity * 100))
+                
+                # Update rounded checkbox (for RectangleObject)
+                if hasattr(item, 'rounded_enabled'):
+                    self.rounded_checkbox.setChecked(item.rounded_enabled)
+                else:
+                    self.rounded_checkbox.setChecked(False)
         finally:
             self._syncing = False
 
@@ -999,6 +1039,7 @@ class PropertyTreeDock(QDockWidget):
         self.style_tab.fill_changed.connect(self._on_fill_changed)
         self.style_tab.line_changed.connect(self._on_line_changed)
         self.style_tab.opacity_changed.connect(self._on_opacity_changed)
+        self.style_tab.rounded_changed.connect(self._on_rounded_changed)
     
     def _set_enabled(self, enabled):
         """Enable or disable the property controls."""
@@ -1039,6 +1080,9 @@ class PropertyTreeDock(QDockWidget):
                 item = items[0]
                 self.style_tab.update_from_item(item)
                 self.text_tab.update_from_item(item)
+                
+                # Sync corner radius mode with transform handler
+                self._sync_corner_radius_mode(item)
             else:
                 # For multiple selection, could show common properties
                 # For now, just use the first item
@@ -1046,6 +1090,13 @@ class PropertyTreeDock(QDockWidget):
                 self.text_tab.update_from_item(items[0])
         finally:
             self._syncing = False
+    
+    def _sync_corner_radius_mode(self, item):
+        """Sync corner radius mode between item and transform handler."""
+        if self.current_canvas and hasattr(self.current_canvas, 'transform_handler'):
+            handler = self.current_canvas.transform_handler
+            if handler and hasattr(item, 'rounded_enabled'):
+                handler.set_corner_radius_mode(item.rounded_enabled)
     
     # === Property Change Handlers ===
     
@@ -1086,3 +1137,35 @@ class PropertyTreeDock(QDockWidget):
                 self.current_canvas.undo_stack.push(cmd)
             else:
                 item.setOpacity(opacity)
+    
+    def _on_rounded_changed(self, enabled):
+        """Handle rounded corners checkbox change."""
+        if self._syncing or not self.selected_items:
+            return
+        
+        # Import here to avoid circular imports
+        from screen.base.base_graphic_object import RectangleObject
+        
+        # Enable/disable rounded mode on selected items
+        for item in self.selected_items:
+            if isinstance(item, RectangleObject):
+                item.rounded_enabled = enabled
+        
+        # Update transform handler to show/hide corner radius handles
+        if self.current_canvas and hasattr(self.current_canvas, 'transform_handler'):
+            handler = self.current_canvas.transform_handler
+            if handler:
+                handler.set_corner_radius_mode(enabled)
+                handler.update_geometry()
+    
+    def set_opacity_from_layers(self, value):
+        """Update opacity UI from layers dock (0-100 integer value).
+        
+        Args:
+            value: Opacity value (0-100 as integer percentage)
+        """
+        self.style_tab.set_opacity_ui(value)
+    
+    def get_style_tab_opacity_signal(self):
+        """Get the style tab's opacity_changed signal for external connections."""
+        return self.style_tab.opacity_changed
