@@ -428,8 +428,13 @@ class LayersDock(QDockWidget):
     def _update_previews(self):
         """Update previews for items that have changed."""
         for item_id in list(self.items_needing_preview_update):
-            # This is called periodically to refresh previews
-            pass
+            # Find tree item by stored item id
+            tree_item = self.object_to_item_map.get(item_id)
+            if tree_item:
+                # Get canvas object from reverse mapping
+                canvas_obj = self.item_to_object_map.get(id(tree_item))
+                if canvas_obj:
+                    self.tree_widget.set_object_preview(tree_item, canvas_obj)
         self.items_needing_preview_update.clear()
     
     def mark_item_for_preview_update(self, item):

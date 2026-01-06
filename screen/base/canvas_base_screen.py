@@ -210,6 +210,10 @@ class CanvasBaseScreen(QGraphicsView):
         # Transform interaction state
         self._resizing_handle = None
         
+        # Drag/move undo tracking state
+        self._drag_started = False
+        self._drag_initial_positions = {}  # {item_id: QPointF}
+        
         # Connect to view service for live updates
         self.view_service.snap_changed.connect(lambda: self.canvas_widget.update())
         self.view_service.grid_size_changed.connect(lambda: self.canvas_widget.update())
@@ -469,10 +473,10 @@ class CanvasBaseScreen(QGraphicsView):
                     try:
                         if len(valid_items) == 1:
                             logger.debug("Creating TransformHandler for single item.")
-                            self.transform_handler = TransformHandler(valid_items[0], self.scene, self.view_service)
+                            self.transform_handler = TransformHandler(valid_items[0], self.scene, self.view_service, self)
                         elif len(valid_items) > 1:
                             logger.debug("Creating AverageTransformHandler for multiple items.")
-                            self.transform_handler = AverageTransformHandler(valid_items, self.scene, self.view_service)
+                            self.transform_handler = AverageTransformHandler(valid_items, self.scene, self.view_service, self)
                     except Exception as e:
                         logger.error(f"CRITICAL: Error creating transform handler: {e}", exc_info=True)
                         self.transform_handler = None
@@ -513,6 +517,33 @@ class CanvasBaseScreen(QGraphicsView):
             })
         # For multiple items, we don't show position/size (ambiguous)
 
+    def _push_move_undo_command(self):
+        """Push an undo command for item move operations (drag)."""
+        if not self._drag_initial_positions:
+            return
+        
+        # Get items that were moved
+        items = []
+        old_positions = []
+        new_positions = []
+        
+        for item_id, old_pos in self._drag_initial_positions.items():
+            # Find the item by checking scene items
+            for item in self.scene.items():
+                if isinstance(item, BaseGraphicObject) and id(item) == item_id:
+                    new_pos = item.pos()
+                    # Only include if position actually changed
+                    if old_pos != new_pos:
+                        items.append(item)
+                        old_positions.append(old_pos)
+                        new_positions.append(QPointF(new_pos))
+                    break
+        
+        if items and old_positions and new_positions:
+            command = MoveItemsCommand(items, old_positions, new_positions, "Move Items")
+            self.undo_stack.push(command)
+            logger.debug(f"Pushed move undo command for {len(items)} items")
+
     def mousePressEvent(self, event):
         """Handle mouse press events."""
         scene_pos = self.mapToScene(event.pos())
@@ -520,19 +551,24 @@ class CanvasBaseScreen(QGraphicsView):
         
         if self.transform_handler and not self.current_tool:
             try:
-                # Use view-based hit testing (event.pos()) for accuracy with items that ignore transformations.
-                # This ensures handles (which have ItemIgnoresTransformations set) are detected correctly
-                # regardless of zoom level, preventing "click-through" to objects or background.
-                items_at_pos = self.items(event.pos())
-                handle_name = self.transform_handler.get_handle_from_items(items_at_pos)
-                
-                if handle_name:
-                    logger.debug(f"Activating resize handle: {handle_name}")
-                    self._resizing_handle = handle_name
-                    self.transform_handler.handle_mouse_press(handle_name, event.pos(), scene_pos)
-                    self.setDragMode(QGraphicsView.DragMode.NoDrag)
-                    event.accept()
-                    return
+                # Validate handler is still valid before checking handles
+                if not self.transform_handler.is_valid():
+                    logger.debug("Transform handler became invalid, clearing")
+                    self.clear_transform_handler()
+                else:
+                    # Use view-based hit testing (event.pos()) for accuracy with items that ignore transformations.
+                    # This ensures handles (which have ItemIgnoresTransformations set) are detected correctly
+                    # regardless of zoom level, preventing "click-through" to objects or background.
+                    items_at_pos = self.items(event.pos())
+                    handle_name = self.transform_handler.get_handle_from_items(items_at_pos)
+                    
+                    if handle_name:
+                        logger.debug(f"Activating resize handle: {handle_name}")
+                        self._resizing_handle = handle_name
+                        self.transform_handler.handle_mouse_press(handle_name, event.pos(), scene_pos)
+                        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+                        event.accept()
+                        return
             except Exception as e:
                 logger.error(f"CRITICAL: Error in mousePressEvent with transform_handler: {e}", exc_info=True)
 
@@ -543,7 +579,60 @@ class CanvasBaseScreen(QGraphicsView):
                 event.accept()
             return
 
+        # Before processing selection, capture if we're clicking on a selected item
+        # (to enable drag-tracking for move operations)
+        previously_selected_items = set(self.scene.selectedItems())
+        
+        # Get all items at click position, filtering out transform handlers
+        items_at_click = self.items(event.pos())
+        item_at_click = None
+        for item in items_at_click:
+            # Skip transform handler and other non-drawable items
+            if not isinstance(item, (TransformHandler, AverageTransformHandler)):
+                item_at_click = item
+                break
+        
+        target_item_before = None
+        
+        # Walk up parent chain to find BaseGraphicObject at click location
+        temp = item_at_click
+        while temp:
+            if isinstance(temp, BaseGraphicObject):
+                target_item_before = temp
+                break
+            temp = temp.parentItem()
+        
+        # Check if we're clicking on an already-selected item
+        clicking_on_selected = target_item_before in previously_selected_items if target_item_before else False
+        
+        # Call base class to handle selection
         super().mousePressEvent(event)
+        
+        # If we were clicking on a selected item but it got deselected by super(), reselect it
+        # (This happens because itemAt() might not properly recognize composed items)
+        if clicking_on_selected and target_item_before and not target_item_before.isSelected():
+            target_item_before.setSelected(True)
+        
+        # Capture initial positions for selected items AFTER selection is updated (for undo tracking)
+        if event.button() == Qt.MouseButton.LeftButton and not self.current_tool:
+            selected_items = [item for item in self.scene.selectedItems() 
+                            if isinstance(item, BaseGraphicObject)]
+            
+            # If we were clicking on a selected item, use those items for drag tracking
+            # Otherwise use the newly selected items
+            if clicking_on_selected and target_item_before and target_item_before.isSelected():
+                items_to_drag = [target_item_before] if target_item_before in selected_items else selected_items
+            else:
+                items_to_drag = selected_items
+            
+            if items_to_drag:
+                self._drag_started = True
+                self._drag_initial_positions = {}
+                for item in items_to_drag:
+                    self._drag_initial_positions[id(item)] = QPointF(item.pos())
+                logger.debug(f"Drag started, captured {len(self._drag_initial_positions)} initial positions")
+            else:
+                logger.debug(f"No items to drag")
 
     def mouseMoveEvent(self, event):
         """Handle mouse move events."""
@@ -553,6 +642,15 @@ class CanvasBaseScreen(QGraphicsView):
         # Handle resizing via transform handler
         if self._resizing_handle and self.transform_handler:
             try:
+                # Validate handler is still valid before using it
+                if not self.transform_handler.is_valid():
+                    logger.debug("Transform handler became invalid during resize, clearing")
+                    self._resizing_handle = None
+                    self.clear_transform_handler()
+                    if not self.current_tool:
+                        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+                    return
+                
                 logger.debug(f"Passing mouse move to transform handler. Handle: {self._resizing_handle}")
                 self.transform_handler.handle_mouse_move(scene_pos, event.modifiers())
                 self.update_snap_lines(self.transform_handler.get_items())
@@ -582,7 +680,8 @@ class CanvasBaseScreen(QGraphicsView):
         
         if self.transform_handler and not self._resizing_handle and not self.current_tool:
             try:
-                self.transform_handler.update_geometry()
+                if self.transform_handler.is_valid():
+                    self.transform_handler.update_geometry()
             except Exception as e:
                 logger.debug(f"Error updating transform handler geometry: {e}")
 
@@ -594,6 +693,9 @@ class CanvasBaseScreen(QGraphicsView):
 
         if self._resizing_handle:
             logger.debug(f"Finished resizing handle: {self._resizing_handle}")
+            # The transform handler will push the undo command in handle_mouse_release
+            if self.transform_handler and self.transform_handler.is_valid():
+                self.transform_handler.handle_mouse_release()
             self._resizing_handle = None
             if not self.current_tool:
                 self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -622,12 +724,18 @@ class CanvasBaseScreen(QGraphicsView):
                 event.accept()
             return
 
+        # Handle drag/move undo tracking
+        if self._drag_started and self._drag_initial_positions:
+            self._push_move_undo_command()
+            self._drag_started = False
+            self._drag_initial_positions = {}
+
         super().mouseReleaseEvent(event)
         
         # Always save after a potential modification
         logger.debug("Saving items after mouse release.")
         self.save_items()
-        if self.transform_handler:
+        if self.transform_handler and self.transform_handler.is_valid():
             self.transform_handler.update_geometry()
             
     def update_snap_lines(self, moving_items):
@@ -1128,7 +1236,7 @@ class CanvasBaseScreen(QGraphicsView):
 
     def flip_items(self, direction):
         """
-        Flip selected items.
+        Flip selected items with undo support.
         
         Args:
             direction: 'horizontal' or 'vertical'
@@ -1137,6 +1245,20 @@ class CanvasBaseScreen(QGraphicsView):
                          if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             return
+        
+        # Capture old states for undo
+        old_states = []
+        for item in selected_items:
+            state = {
+                'pos': QPointF(item.pos()),
+                'rect': QRectF(item.boundingRect()),
+                'rotation': item.rotation(),
+                'transform_origin': QPointF(item.transformOriginPoint()),
+                'transform': item.transform()  # Store full transform for flip
+            }
+            if hasattr(item, 'corner_radii'):
+                state['corner_radii'] = item.corner_radii.copy()
+            old_states.append(state)
         
         # Get the center of all selected items
         combined_rect = selected_items[0].sceneBoundingRect()
@@ -1162,12 +1284,31 @@ class CanvasBaseScreen(QGraphicsView):
                 offset_y = 2 * (center.y() - item_center.y())
                 item.moveBy(0, offset_y)
         
+        # Capture new states for undo
+        new_states = []
+        for item in selected_items:
+            state = {
+                'pos': QPointF(item.pos()),
+                'rect': QRectF(item.boundingRect()),
+                'rotation': item.rotation(),
+                'transform_origin': QPointF(item.transformOriginPoint()),
+                'transform': item.transform()
+            }
+            if hasattr(item, 'corner_radii'):
+                state['corner_radii'] = item.corner_radii.copy()
+            new_states.append(state)
+        
+        # Push undo command
+        from services.undo_commands import TransformItemsCommand
+        command = TransformItemsCommand(selected_items, old_states, new_states, f"Flip {direction.title()}")
+        self.undo_stack.push(command)
+        
         self.save_items()
         logger.debug(f"Flipped {len(selected_items)} items {direction}")
 
     def rotate_items(self, angle):
         """
-        Rotate selected items by the specified angle.
+        Rotate selected items by the specified angle with undo support.
         
         Args:
             angle: Rotation angle in degrees (positive = clockwise)
@@ -1176,6 +1317,19 @@ class CanvasBaseScreen(QGraphicsView):
                          if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             return
+        
+        # Capture old states for undo
+        old_states = []
+        for item in selected_items:
+            state = {
+                'pos': QPointF(item.pos()),
+                'rect': QRectF(item.boundingRect()),
+                'rotation': item.rotation(),
+                'transform_origin': QPointF(item.transformOriginPoint())
+            }
+            if hasattr(item, 'corner_radii'):
+                state['corner_radii'] = item.corner_radii.copy()
+            old_states.append(state)
         
         # Get the center of all selected items
         combined_rect = selected_items[0].sceneBoundingRect()
@@ -1192,6 +1346,25 @@ class CanvasBaseScreen(QGraphicsView):
             # Rotate around the combined center point
             item.setTransformOriginPoint(item.mapFromScene(center))
             item.setRotation(new_rotation)
+        
+        # Capture new states for undo
+        new_states = []
+        for item in selected_items:
+            state = {
+                'pos': QPointF(item.pos()),
+                'rect': QRectF(item.boundingRect()),
+                'rotation': item.rotation(),
+                'transform_origin': QPointF(item.transformOriginPoint())
+            }
+            if hasattr(item, 'corner_radii'):
+                state['corner_radii'] = item.corner_radii.copy()
+            new_states.append(state)
+        
+        # Push undo command
+        from services.undo_commands import TransformItemsCommand
+        description = f"Rotate {'+' if angle > 0 else ''}{int(angle)}°"
+        command = TransformItemsCommand(selected_items, old_states, new_states, description)
+        self.undo_stack.push(command)
         
         self.save_items()
         logger.debug(f"Rotated {len(selected_items)} items by {angle} degrees")

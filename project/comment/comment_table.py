@@ -111,19 +111,30 @@ class ResizeCommand(QUndoCommand):
         self.action = action # 'add_row', 'remove_row', 'add_col', 'remove_col'
         self.index = index
         self.count = count
-        self.saved_data = [] # Used for undoing removals
+        self.saved_data = [] # Used for undoing removals or additions
 
     def redo(self):
         if 'add' in self.action:
+            # For add operations, save the data that's being replaced
+            self.saved_data = []
+            if self.action == 'add_row':
+                for c in range(self.table.columnCount()):
+                    item = self.table.item(self.index, c)
+                    self.saved_data.append(item.get_data() if item else {'value': ''})
+            elif self.action == 'add_col':
+                for r in range(self.table.rowCount()):
+                    item = self.table.item(r, self.index)
+                    self.saved_data.append(item.get_data() if item else {'value': ''})
             self.table.perform_insert(self.action, self.index, self.count)
         else:
             self.saved_data = self.table.perform_remove(self.action, self.index)
 
     def undo(self):
         if 'add' in self.action:
-            # Undo add = remove
+            # Undo add = remove the same count that was added
             remove_action = self.action.replace('add', 'remove')
-            self.table.perform_remove(remove_action, self.index)
+            for _ in range(self.count):
+                self.table.perform_remove(remove_action, self.index)
         else:
             # Undo remove = insert and restore
             insert_action = self.action.replace('remove', 'add')
@@ -336,11 +347,13 @@ class Spreadsheet(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.delegate = SpreadsheetDelegate(self)
         self.setItemDelegate(self.delegate)
-        self.delegate.editingTextChanged.connect(parent.formula_bar.setText)
+        if parent is not None:
+            self.delegate.editingTextChanged.connect(parent.formula_bar.setText)
 
         self.update_headers()
         self.itemSelectionChanged.connect(self.on_selection_changed)
-        parent.formula_bar.textChanged.connect(self.on_formula_bar_text_changed)
+        if parent is not None:
+            parent.formula_bar.textChanged.connect(self.on_formula_bar_text_changed)
 
         # REMOVED: Stylesheet now handled by global stylesheet.qss
         # The global stylesheet provides consistent theming across the application

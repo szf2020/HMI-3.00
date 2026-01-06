@@ -4,16 +4,18 @@ Object Properties Toolbar
 =========================
 A floating toolbar for displaying and editing selected object's 
 position, size, and rotation angle with live updates.
+Supports undo/redo for all property changes.
 """
 
 from PySide6.QtWidgets import (
     QToolBar, QWidget, QHBoxLayout, QLabel, QDoubleSpinBox, 
     QCheckBox, QFrame
 )
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QPointF, QRectF
 from ..services.icon_service import IconService
 from screen.base.canvas_base_screen import CanvasBaseScreen
 from screen.base.base_graphic_object import BaseGraphicObject
+from services.undo_commands import TransformItemsCommand, MoveItemsCommand
 from styles import stylesheets
 
 
@@ -22,6 +24,7 @@ class ObjectPropertiesToolbar(QToolBar):
     Toolbar for displaying and editing selected object properties.
     Shows X, Y position, Width, Height, and Angle.
     All values are editable and provide live updates to the canvas.
+    Supports undo/redo for all changes.
     """
     
     # Signals emitted when user edits values
@@ -35,6 +38,10 @@ class ObjectPropertiesToolbar(QToolBar):
         self._syncing = False  # Prevent feedback loops during sync
         self._last_width = 100
         self._last_height = 100
+        
+        # Track initial state for undo
+        self._editing_item = None
+        self._edit_initial_state = None
         
         self._setup_ui()
         
@@ -231,9 +238,21 @@ class ObjectPropertiesToolbar(QToolBar):
         # Apply to active canvas selection
         self._apply_angle_to_selection(value)
         self.angle_edited.emit(value)
+    
+    def _capture_item_state(self, item):
+        """Capture current state of an item for undo."""
+        state = {
+            'pos': QPointF(item.pos()),
+            'rect': QRectF(item.boundingRect()),
+            'rotation': item.rotation(),
+            'transform_origin': QPointF(item.transformOriginPoint())
+        }
+        if hasattr(item, 'corner_radii'):
+            state['corner_radii'] = item.corner_radii.copy()
+        return state
         
     def _apply_position_to_selection(self, x, y):
-        """Apply position changes to the selected object(s)."""
+        """Apply position changes to the selected object(s) with undo support."""
         active_screen = self.main_window.get_active_screen_widget()
         if not isinstance(active_screen, CanvasBaseScreen):
             return
@@ -243,14 +262,25 @@ class ObjectPropertiesToolbar(QToolBar):
         
         if len(valid_items) == 1:
             item = valid_items[0]
-            item.setPos(x, y)
+            
+            # Capture old state
+            old_pos = QPointF(item.pos())
+            new_pos = QPointF(x, y)
+            
+            # Only push command if position actually changed
+            if old_pos != new_pos:
+                # Use MoveItemsCommand for position changes
+                command = MoveItemsCommand([item], [old_pos], [new_pos], "Move Item")
+                active_screen.undo_stack.push(command)
+            
             active_screen.scene.update()
+            active_screen.save_items()
             # Update transform handler if exists
             if active_screen.transform_handler:
                 active_screen.transform_handler.update_geometry()
                 
     def _apply_size_to_selection(self, width, height):
-        """Apply size changes to the selected object(s)."""
+        """Apply size changes to the selected object(s) with undo support."""
         active_screen = self.main_window.get_active_screen_widget()
         if not isinstance(active_screen, CanvasBaseScreen):
             return
@@ -260,18 +290,31 @@ class ObjectPropertiesToolbar(QToolBar):
         
         if len(valid_items) == 1:
             item = valid_items[0]
-            # Use set_geometry with QRectF for BaseGraphicObject
-            from PySide6.QtCore import QRectF
+            
+            # Capture old state
+            old_state = self._capture_item_state(item)
+            
+            # Apply the size change
             current_rect = item.boundingRect()
             new_rect = QRectF(current_rect.x(), current_rect.y(), width, height)
             item.set_geometry(new_rect)
+            
+            # Capture new state
+            new_state = self._capture_item_state(item)
+            
+            # Only push command if state actually changed
+            if old_state != new_state:
+                command = TransformItemsCommand([item], [old_state], [new_state], "Resize Item")
+                active_screen.undo_stack.push(command)
+            
             active_screen.scene.update()
+            active_screen.save_items()
             # Update transform handler if exists
             if active_screen.transform_handler:
                 active_screen.transform_handler.update_geometry()
                 
     def _apply_angle_to_selection(self, angle):
-        """Apply rotation angle to the selected object(s)."""
+        """Apply rotation angle to the selected object(s) with undo support."""
         active_screen = self.main_window.get_active_screen_widget()
         if not isinstance(active_screen, CanvasBaseScreen):
             return
@@ -281,12 +324,26 @@ class ObjectPropertiesToolbar(QToolBar):
         
         if len(valid_items) == 1:
             item = valid_items[0]
-            # Set rotation around center
+            
+            # Capture old state
+            old_state = self._capture_item_state(item)
+            
+            # Apply the rotation
             rect = item.boundingRect()
             center = rect.center()
             item.setTransformOriginPoint(center)
             item.setRotation(angle)
+            
+            # Capture new state
+            new_state = self._capture_item_state(item)
+            
+            # Only push command if state actually changed
+            if old_state != new_state:
+                command = TransformItemsCommand([item], [old_state], [new_state], "Rotate Item")
+                active_screen.undo_stack.push(command)
+            
             active_screen.scene.update()
+            active_screen.save_items()
             # Update transform handler if exists
             if active_screen.transform_handler:
                 active_screen.transform_handler.update_geometry()

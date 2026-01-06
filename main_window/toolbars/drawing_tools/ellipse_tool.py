@@ -55,5 +55,6 @@ class EllipseTool:
             else:
                 self.current_item.setSelected(True)
 
-            self.current_item = None
+            # The item is finalized in canvas_base_screen
+            # self.current_item = None
             self.start_pos = None

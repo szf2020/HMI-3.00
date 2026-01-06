@@ -495,8 +495,10 @@ class TagTable(QWidget):
             return QDateTime.currentDateTime().toString("dd-MM-yyyy HH:mm:ss")
         elif data_type == "Timer":
             return "00:00:00.000"
+        elif data_type == "String":
+            return ""
         else:
-            # For Bit, Int, Real, String, Counter, etc.
+            # For Bit, Int, Real, Counter, etc.
             return "0"
 
     def setup_ui(self):
@@ -619,11 +621,22 @@ class TagTable(QWidget):
             self._update_parent_array_display(parent_item, dims)
 
     def _parse_array_dimensions(self, dim_str):
-        """Parses '10', '10x10' etc."""
+        """Parses '10', '10x10' etc. Returns empty list for invalid dimensions."""
         if not dim_str: return []
         try:
             parts = re.split(r'[xX]', str(dim_str))
-            return [int(p) for p in parts if p.isdigit()]
+            # Filter for valid digits and convert to int, exclude 0 and empty strings
+            dims = []
+            for p in parts:
+                if p.isdigit():
+                    val = int(p)
+                    if val > 0:  # Only accept positive integers
+                        dims.append(val)
+                    else:
+                        return []  # Invalid: 0 or negative dimension
+                else:
+                    return []  # Invalid: non-digit part
+            return dims
         except ValueError:
             return []
 
@@ -726,6 +739,16 @@ class TagTable(QWidget):
 
     def _get_row_data(self, row):
         item = self.table.topLevelItem(row)
+        if not item:
+            return {
+                'name': '',
+                'type': 'Bit',
+                'initial_value': '0',
+                'array_elements': '1',
+                'constant': False,
+                'comment': '',
+                'child_values': {}
+            }
         
         # Collect child data
         child_values = {}
@@ -849,6 +872,17 @@ class TagTable(QWidget):
             self.table.blockSignals(False)
 
         self.save_data()
+
+    def _add_tag_from_data(self, tag_data):
+        """
+        Add a tag directly from a data dictionary.
+        Used by OptimizedTagAddition for batch operations.
+        
+        Args:
+            tag_data: Dictionary containing tag properties
+        """
+        row = self.table.topLevelItemCount()
+        self._insert_tag_item(row, tag_data)
 
     def add_tag(self):
         row = self.table.topLevelItemCount()
@@ -1060,7 +1094,8 @@ class TagTable(QWidget):
         
         self.tag_data['tags'] = tags
         
-        if hasattr(self.main_window, 'project_service'):
+        # Check if project_service exists and is not None
+        if hasattr(self.main_window, 'project_service') and self.main_window.project_service is not None:
             tag_number = str(self.tag_data.get('number'))
             if tag_number:
                 if 'tag_lists' not in self.main_window.project_service.project_data:

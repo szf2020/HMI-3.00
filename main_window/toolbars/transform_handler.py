@@ -5,6 +5,7 @@ Robust Transform Handler System
 Provides reliable transform handles for single and multiple graphics items.
 Includes comprehensive error handling, state validation, and coordinate safety.
 Supports rotation from corner handles with center anchor point.
+Supports undo/redo for all transformations.
 """
 
 import math
@@ -13,6 +14,7 @@ from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import QPen, QBrush, QColor, QCursor, QPixmap, QPainter
 from styles import colors
 from screen.base.base_graphic_object import BaseGraphicObject, RectangleObject
+from services.undo_commands import TransformItemsCommand, CornerRadiusCommand
 from debug_utils import get_logger
 
 logger = get_logger(__name__)
@@ -119,6 +121,7 @@ class BaseTransformHandler(QGraphicsItem):
     Provides common functionality and error handling for all handlers.
     Supports rotation from corner handles with center anchor point.
     Supports corner radius adjustment for rounded rectangles.
+    Supports undo/redo for all transformations.
     """
 
     # Offset for rotation handles from corners (in pixels)
@@ -126,13 +129,14 @@ class BaseTransformHandler(QGraphicsItem):
     # Offset for corner radius handles (inside the corner)
     CORNER_RADIUS_HANDLE_OFFSET = 15
 
-    def __init__(self, scene, view_service):
+    def __init__(self, scene, view_service, canvas=None):
         super().__init__()
         self._is_resizing = False
         self._is_rotating = False
         self._is_adjusting_corner_radius = False
         self.scene_ref = scene
         self.view_service = view_service
+        self.canvas = canvas  # Reference to CanvasBaseScreen for undo stack access
         
         self.setZValue(9999)  # Always on top
         
@@ -159,6 +163,10 @@ class BaseTransformHandler(QGraphicsItem):
         self._corner_drag_start_pos = QPointF()
         self._active_corner_index = -1
         
+        # Undo state - stores initial states when transform starts
+        self._undo_initial_states = []
+        self._transform_started = False
+        
         # Create rotation cursor
         self._rotation_cursor = create_rotation_cursor()
         
@@ -168,6 +176,58 @@ class BaseTransformHandler(QGraphicsItem):
         
         # CRITICAL: Do NOT call addItem(self) here. 
         # Subclasses must call addToScene() explicitly at the end of their __init__.
+
+    def _capture_item_state(self, item):
+        """Capture current state of an item for undo."""
+        state = {
+            'pos': QPointF(item.pos()),
+            'rect': QRectF(item.boundingRect()),
+            'rotation': item.rotation(),
+            'transform_origin': QPointF(item.transformOriginPoint())
+        }
+        # Capture corner radii for rectangles
+        if hasattr(item, 'corner_radii'):
+            state['corner_radii'] = item.corner_radii.copy()
+        return state
+
+    def _capture_all_states(self):
+        """Capture states for all items being transformed."""
+        items = self.get_items()
+        states = []
+        for item in items:
+            if isinstance(item, BaseGraphicObject) and item.scene():
+                states.append(self._capture_item_state(item))
+            else:
+                states.append({})
+        return states
+    
+    def _push_undo_command(self, description="Transform"):
+        """Push an undo command if transformation occurred."""
+        if not self._transform_started or not self.canvas:
+            return
+        
+        items = self.get_items()
+        new_states = self._capture_all_states()
+        
+        # Only push if states actually changed
+        states_changed = False
+        for old_state, new_state in zip(self._undo_initial_states, new_states):
+            if old_state != new_state:
+                states_changed = True
+                break
+        
+        if states_changed and self.canvas.undo_stack:
+            command = TransformItemsCommand(
+                items, 
+                self._undo_initial_states, 
+                new_states, 
+                description
+            )
+            self.canvas.undo_stack.push(command)
+            logger.debug(f"Pushed undo command: {description}")
+        
+        self._transform_started = False
+        self._undo_initial_states = []
 
     def addToScene(self):
         """Safely add the handler to the scene after full initialization."""
@@ -314,6 +374,10 @@ class BaseTransformHandler(QGraphicsItem):
         """Called when a handle is pressed."""
         self._drag_mode = handle_name
         
+        # Capture initial states for undo BEFORE any transformation
+        self._undo_initial_states = self._capture_all_states()
+        self._transform_started = True
+        
         if self.is_corner_radius_handle(handle_name):
             self._is_adjusting_corner_radius = True
             self._is_rotating = False
@@ -337,6 +401,19 @@ class BaseTransformHandler(QGraphicsItem):
 
     def handle_mouse_release(self):
         """Called when the mouse is released after a transform."""
+        # Determine description based on what was being done
+        if self._is_rotating:
+            description = "Rotate"
+        elif self._is_adjusting_corner_radius:
+            description = "Change Corner Radius"
+        elif self._is_resizing:
+            description = "Resize"
+        else:
+            description = "Transform"
+        
+        # Push undo command with captured states
+        self._push_undo_command(description)
+        
         self._is_resizing = False
         self._is_rotating = False
         self._is_adjusting_corner_radius = False
@@ -357,6 +434,7 @@ class BaseTransformHandler(QGraphicsItem):
             self._rotation_handles.clear()
             self._corner_radius_handles.clear()
             self.scene_ref = None
+            self.canvas = None
     
     def set_corner_radius_mode(self, enabled):
         """Enable or disable corner radius adjustment mode."""
@@ -374,7 +452,7 @@ class TransformHandler(BaseTransformHandler):
     Manages selection handles for a single QGraphicsItem.
     """
     
-    def __init__(self, target_item, scene, view_service):
+    def __init__(self, target_item, scene, view_service, canvas=None):
         logger.debug("TransformHandler.__init__")
         self.target_item = target_item
         self._aspect_ratio = 1.0
@@ -386,7 +464,7 @@ class TransformHandler(BaseTransformHandler):
         self._anchor_scene_pos = QPointF()  # Anchor point in scene coordinates for resize
 
         # Initialize base class WITHOUT adding to scene yet
-        super().__init__(scene, view_service)
+        super().__init__(scene, view_service, canvas)
         
         try:
             if self.validate():
@@ -898,9 +976,6 @@ class TransformHandler(BaseTransformHandler):
             
         except Exception as e:
             logger.error(f"Error handling corner radius: {e}", exc_info=True)
-            
-        except Exception as e:
-            logger.error(f"Error handling corner radius: {e}", exc_info=True)
 
     def _handle_rotation(self, scene_pos, modifiers=Qt.KeyboardModifier.NoModifier):
         """Handle rotation of the target item around its center."""
@@ -952,18 +1027,19 @@ class AverageTransformHandler(BaseTransformHandler):
     Manages selection handles for multiple QGraphicsItems.
     """
     
-    def __init__(self, target_items, scene, view_service):
+    def __init__(self, target_items, scene, view_service, canvas=None):
         logger.debug("AverageTransformHandler.__init__")
         self.target_items = list(target_items) if target_items else []
         self._initial_rects = {}
         self._initial_positions = {}
+        self._initial_rotations = {}  # Initialize rotation tracking dict
         self._initial_avg_rect = QRectF()
         self._average_rect = QRectF()
         
         self.border_pen = QPen(QColor(colors.COLOR_TRANSFORM_BORDER), 2, Qt.PenStyle.SolidLine)
         self.border_pen.setCosmetic(True)
         
-        super().__init__(scene, view_service)
+        super().__init__(scene, view_service, canvas)
         
         try:
             if self.validate():

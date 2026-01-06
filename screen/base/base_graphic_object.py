@@ -31,6 +31,10 @@ class BaseGraphicObject(QGraphicsItem):
         self.view = view
         # Flag to disable snap offset during transform handler operations
         self._transform_in_progress = False
+        
+        # Make this item hit-testable based on its children's shapes
+        # This is critical for composed items where the parent is a container
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemContainsChildrenInShape, True)
 
     def boundingRect(self):
         return self.item.boundingRect()

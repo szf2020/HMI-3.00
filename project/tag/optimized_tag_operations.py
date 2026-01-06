@@ -59,7 +59,7 @@ class OptimizedTagDeletion:
             for i, row in enumerate(sorted_rows):
                 # Update progress
                 if progress:
-                    if progress.wasCancelled():
+                    if progress.wasCanceled():
                         tag_table.table.blockSignals(False)
                         tag_table.table.update()
                         return False
@@ -148,7 +148,7 @@ class OptimizedTagAddition:
             for i, tag_data in enumerate(tags_data):
                 # Update progress
                 if progress:
-                    if progress.wasCancelled():
+                    if progress.wasCanceled():
                         tag_table.table.blockSignals(False)
                         tag_table.table.update()
                         return False
