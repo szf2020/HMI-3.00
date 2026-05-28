@@ -179,6 +179,8 @@ class AddItemCommand(QUndoCommand):
         """Add the item to the canvas."""
         self.item = self.canvas.create_graphic_item_from_data(self.item_data)
         self.canvas.save_items()
+        if hasattr(self.canvas, 'project_service'):
+            self.canvas.project_service.append_action_history(self.text(), None, self.item_data)
         
     def undo(self):
         """Remove the item from the canvas."""
@@ -187,6 +189,8 @@ class AddItemCommand(QUndoCommand):
             self.canvas.scene.removeItem(self.item)
             self.canvas.clear_transform_handler()
             self.canvas.save_items()
+            if hasattr(self.canvas, 'project_service'):
+                self.canvas.project_service.append_action_history(self.text(), self.item_data, None)
             self.item = None
 
 

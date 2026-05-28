@@ -1,5 +1,6 @@
 # screen\base\base_graphic_object.py
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsItem, QGraphicsPathItem
+from PySide6.QtCore import Qt
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QPainterPath, QPen, QBrush
 from debug_utils import get_logger
@@ -54,6 +55,29 @@ class BaseGraphicObject(QGraphicsItem):
     def set_transform_in_progress(self, in_progress):
         """Flag to disable snap logic during handler-driven transforms."""
         self._transform_in_progress = in_progress
+
+
+    def to_json(self):
+        """Serialize the graphic object to JSON-friendly structure."""
+        data = self.data(Qt.ItemDataRole.UserRole) or {}
+        payload = dict(data) if isinstance(data, dict) else {}
+        rect = self.boundingRect()
+        payload.setdefault('id', payload.get('id'))
+        payload['geometry'] = {
+            'x': self.pos().x(),
+            'y': self.pos().y(),
+            'width': rect.width(),
+            'height': rect.height(),
+            'rotation': self.rotation(),
+        }
+        payload.setdefault('styling', {})
+        payload.setdefault('data_links', {'tags': [], 'comments': []})
+        return payload
+
+    @classmethod
+    def from_json(cls, payload):
+        """Default passthrough for factory-driven deserialization."""
+        return payload
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():

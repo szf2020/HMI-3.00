@@ -10,6 +10,8 @@ from enum import Enum, auto
 import copy
 
 from debug_utils import get_logger
+import json
+from uuid import uuid4
 
 logger = get_logger(__name__)
 
@@ -144,6 +146,35 @@ class EditService(QObject):
         After this, subsequent pastes won't trigger deletion.
         """
         self._is_cut_operation = False
+
+
+
+    def set_canvas_clipboard(self, items, project_service=None, is_cut=False):
+        serialized = copy.deepcopy(items)
+        self.set_clipboard(serialized, ClipboardDataType.CANVAS_ITEMS, is_cut=is_cut)
+        try:
+            self.system_clipboard.setText(json.dumps(serialized))
+        except Exception:
+            pass
+        if project_service:
+            project_service.update_clipboard_buffer(serialized)
+
+    def paste_canvas_items(self, project_service=None, offset=10):
+        data, data_type, is_cut = self.get_clipboard()
+        if data_type != ClipboardDataType.CANVAS_ITEMS or not isinstance(data, list):
+            return []
+        pasted = []
+        for item in data:
+            new_item = copy.deepcopy(item)
+            new_item['id'] = str(uuid4())
+            pos = new_item.get('pos', [0, 0])
+            new_item['pos'] = [pos[0] + offset, pos[1] + offset]
+            pasted.append(new_item)
+        if project_service:
+            project_service.update_clipboard_buffer(pasted)
+        if is_cut:
+            self.mark_cut_completed()
+        return pasted
 
     # ========== Undo Stack Management ==========
     

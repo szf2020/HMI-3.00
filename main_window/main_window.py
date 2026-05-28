@@ -168,6 +168,7 @@ class MainWindow(QMainWindow):
     def project_modified(self):
         """Slot to handle modifications to the project."""
         self.project_service.mark_as_unsaved()
+        self.project_service.save_structured_project_state()
         self.update_window_title()
 
     def get_project_content(self):
@@ -300,6 +301,7 @@ class MainWindow(QMainWindow):
             screen_widget.object_data_changed.connect(obj_props_toolbar.on_object_data_changed)
 
         screen_widget.canvas_selection_changed.connect(self._on_canvas_selection_changed)
+        screen_widget.undo_stack.indexChanged.connect(lambda _=None, sw=screen_widget: self._persist_active_screen(sw))
         
         if screen_type == 'base':
             tab_title = f"[B] - {screen_number} - {screen_data.get('name')}"
@@ -316,6 +318,31 @@ class MainWindow(QMainWindow):
         self.open_screens[screen_id] = screen_widget
         self.central_widget.setCurrentWidget(screen_widget)
         self.update_status_bar(screen_widget)
+
+
+    def _persist_active_screen(self, screen_widget):
+        """Persist active screen data to json_data/screens/<screen>.json."""
+        try:
+            if not screen_widget:
+                return
+            screen_widget.save_items()
+            payload = {
+                'schema_version': '1.0',
+                'metadata': {
+                    'name': screen_widget.screen_data.get('name', 'screen'),
+                    'type': screen_widget.screen_data.get('type'),
+                    'number': screen_widget.screen_data.get('number'),
+                    'background_color': screen_widget.screen_data.get('background_color', '#FFFFFF'),
+                    'dimensions': {
+                        'width': screen_widget.scene.sceneRect().width(),
+                        'height': screen_widget.scene.sceneRect().height(),
+                    },
+                },
+                'objects': screen_widget.screen_data.get('items', []),
+            }
+            self.project_service.save_screen_state(payload['metadata']['name'], payload)
+        except Exception:
+            pass
 
     def on_tool_reset(self):
         """Handles resetting the tool to selection mode."""
