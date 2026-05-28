@@ -1,141 +1,169 @@
-# services\project_service.py
 import json
-import os
 import logging
-import tempfile
-import shutil
-from PySide6.QtWidgets import QMessageBox
+from dataclasses import dataclass
+from pathlib import Path
+
+from services.storage_manager import StorageManager
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class ProjectMetadata:
+    project_id: str
+    project_path: Path
+    source_path: Path | None = None
+
+
 class ProjectService:
-    """
-    A service class to manage project-related data and operations.
-    """
+    """A service class to manage project-related data and operations."""
+
     def __init__(self):
+        self.storage = StorageManager()
         self.project_data = self.get_default_project_data()
         self.file_path = None
+        self.project_metadata: ProjectMetadata | None = None
         self.is_saved = True
 
     def get_default_project_data(self):
-        """Returns the default structure for a new project."""
         return {
-            'screens': [],
-            'comments': {},
-            'screen_design_template': {
+            "screens": [],
+            "comments": {},
+            "tag_lists": {},
+            "screen_design_template": {
                 "width": 1920,
                 "height": 1080,
                 "type": "color",
-                "color": "#FFFFFF"
-            }
+                "color": "#FFFFFF",
+            },
         }
 
     def new_project(self):
-        """Resets the project to a new, unsaved state."""
+        project_ref = self.storage.create_project("project")
         self.project_data = self.get_default_project_data()
-        self.file_path = None
+        self.project_metadata = ProjectMetadata(project_ref.project_id, project_ref.project_path)
+        self.file_path = str(project_ref.project_path)
         self.is_saved = False
 
+    def _load_folder_project(self, project_dir: Path):
+        settings = self.storage.load_settings(project_dir)
+        tags = self.storage.load_tags(project_dir)
+        comments = self.storage.load_comments(project_dir)
+
+        screens = []
+        for screen_id in self.storage.list_screens(project_dir):
+            screen_payload = self.storage.load_screen(project_dir, screen_id)
+            if screen_payload:
+                screens.append(screen_payload)
+
+        self.project_data = self.get_default_project_data()
+        self.project_data["screens"] = screens
+        self.project_data["screen_design_template"] = settings.get(
+            "screen_design_template", self.get_default_project_data()["screen_design_template"]
+        )
+        self.project_data["tag_lists"] = tags.get("tag_lists", {})
+        self.project_data["comments"] = comments.get("comments", {})
+
+        self.project_metadata = ProjectMetadata(project_dir.name.split("_")[-1], project_dir, project_dir)
+        self.file_path = str(project_dir)
+
+    def _migrate_legacy_hmi(self, file_path: Path):
+        with file_path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        project_data = data.get("project_data", self.get_default_project_data())
+        name = file_path.stem
+        project_ref = self.storage.create_project(name)
+
+        self.storage.save_settings(project_ref.project_path, {
+            "screen_design_template": project_data.get(
+                "screen_design_template", self.get_default_project_data()["screen_design_template"]
+            )
+        })
+        self.storage.save_tags(project_ref.project_path, {"tag_lists": project_data.get("tag_lists", {})})
+        self.storage.save_comments(project_ref.project_path, {"comments": project_data.get("comments", {})})
+
+        for idx, screen in enumerate(project_data.get("screens", [])):
+            screen_id = str(screen.get("id") or screen.get("name") or f"screen_{idx + 1}")
+            self.storage.save_screen(project_ref.project_path, screen_id, screen)
+
+        self.project_data = project_data
+        if "screen_design_template" not in self.project_data:
+            self.project_data["screen_design_template"] = self.get_default_project_data()["screen_design_template"]
+        if "comments" not in self.project_data:
+            self.project_data["comments"] = {}
+        if "tag_lists" not in self.project_data:
+            self.project_data["tag_lists"] = {}
+
+        self.project_metadata = ProjectMetadata(project_ref.project_id, project_ref.project_path, file_path)
+        self.file_path = str(file_path)
+
     def load_project(self, file_path):
-        """Loads a project from a file."""
         try:
-            if not os.path.exists(file_path):
-                logger.error(f"Project file not found: {file_path}")
+            path = Path(file_path)
+            if not path.exists():
                 raise FileNotFoundError(f"Project file not found: {file_path}")
 
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
+            if path.is_dir():
+                self._load_folder_project(path)
+            else:
+                self._migrate_legacy_hmi(path)
 
-            self.file_path = file_path
-            self.project_data = data.get('project_data', self.get_default_project_data())
-            # Ensure screen_design_template exists for older projects
-            if 'screen_design_template' not in self.project_data:
-                self.project_data['screen_design_template'] = self.get_default_project_data()['screen_design_template']
-            if 'comments' not in self.project_data:
-                self.project_data['comments'] = {}
             self.is_saved = True
-
-            logger.info(f"Project loaded successfully: {file_path}")
+            logger.info("Project loaded successfully: %s", file_path)
             return True, "Project loaded successfully"
-
-        except FileNotFoundError as e:
-            logger.error(f"FileNotFoundError: {e}")
-            return False, str(e)
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON format: {e}")
-            return False, f"Invalid project file format: {str(e)}"
-        except Exception as e:
-            logger.error(f"Error loading project: {e}", exc_info=True)
-            return False, f"Error loading project: {str(e)}"
+        except FileNotFoundError as exc:
+            logger.error("FileNotFoundError: %s", exc)
+            return False, str(exc)
+        except json.JSONDecodeError as exc:
+            logger.error("Invalid JSON format: %s", exc)
+            return False, f"Invalid project file format: {str(exc)}"
+        except Exception as exc:
+            logger.error("Error loading project: %s", exc, exc_info=True)
+            return False, f"Error loading project: {str(exc)}"
 
     def save_project(self, file_path=None):
-        """Saves the project to a file with atomic write and backup."""
         try:
             if file_path:
                 self.file_path = file_path
 
-            if not self.file_path:
-                return False, "No file path specified"
+            if not self.project_metadata:
+                project_ref = self.storage.create_project(Path(self.file_path).stem if self.file_path else "project")
+                self.project_metadata = ProjectMetadata(project_ref.project_id, project_ref.project_path)
 
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+            project_path = self.project_metadata.project_path
+            self.storage.save_settings(project_path, {
+                "screen_design_template": self.project_data.get(
+                    "screen_design_template", self.get_default_project_data()["screen_design_template"]
+                )
+            })
+            self.storage.save_tags(project_path, {"tag_lists": self.project_data.get("tag_lists", {})})
+            self.storage.save_comments(project_path, {"comments": self.project_data.get("comments", {})})
 
-            # Prepare data to save
-            data_to_save = {
-                'project_data': self.project_data,
-                'file_path': self.file_path,
-                'version': '1.0'
-            }
+            existing = set(self.storage.list_screens(project_path))
+            current = set()
+            for idx, screen in enumerate(self.project_data.get("screens", [])):
+                screen_id = str(screen.get("id") or screen.get("name") or f"screen_{idx + 1}")
+                current.add(screen_id)
+                self.storage.save_screen(project_path, screen_id, screen)
 
-            # Write to temporary file first (atomic write)
-            temp_dir = os.path.dirname(self.file_path)
-            with tempfile.NamedTemporaryFile(
-                mode='w', 
-                delete=False, 
-                suffix='.json',
-                dir=temp_dir,
-                encoding='utf-8'
-            ) as tmp_file:
-                json.dump(data_to_save, tmp_file, indent=2, ensure_ascii=False)
-                tmp_path = tmp_file.name
-
-            # Create backup of existing file if it exists
-            if os.path.exists(self.file_path):
-                backup_path = self.file_path + '.backup'
-                try:
-                    shutil.copy2(self.file_path, backup_path)
-                    logger.info(f"Backup created: {backup_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to create backup: {e}")
-
-            # Atomic move (replace original with temp file)
-            shutil.move(tmp_path, self.file_path)
+            for deleted in existing - current:
+                self.storage.delete_screen(project_path, deleted)
 
             self.is_saved = True
-            logger.info(f"Project saved successfully: {self.file_path}")
+            logger.info("Project saved successfully: %s", project_path)
             return True, "Project saved successfully"
-
-        except PermissionError:
-            logger.error(f"Permission denied saving to {self.file_path}")
-            return False, "Permission denied. Cannot save to this location."
-        except OSError as e:
-            logger.error(f"File system error during save: {e}")
-            return False, f"File system error: {str(e)}"
-        except Exception as e:
-            logger.error(f"Error saving project: {e}", exc_info=True)
-            return False, f"Error saving project: {str(e)}"
+        except Exception as exc:
+            logger.error("Error saving project: %s", exc, exc_info=True)
+            return False, f"Error saving project: {str(exc)}"
 
     def mark_as_unsaved(self):
-        """Marks the current project as having unsaved changes."""
         if self.is_saved:
             self.is_saved = False
-            # self.main_window.update_window_title() # This should be handled by the main window
 
     def get_screen_design_template(self):
-        """Returns the project-wide screen design template."""
-        return self.project_data.get('screen_design_template', self.get_default_project_data()['screen_design_template'])
+        return self.project_data.get("screen_design_template", self.get_default_project_data()["screen_design_template"])
 
     def set_screen_design_template(self, template_data):
-        """Sets the project-wide screen design template."""
-        self.project_data['screen_design_template'] = template_data
+        self.project_data["screen_design_template"] = template_data
         self.mark_as_unsaved()
