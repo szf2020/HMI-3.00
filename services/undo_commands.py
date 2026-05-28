@@ -9,6 +9,57 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 import copy
 
 
+class JsonStateCommand(QUndoCommand):
+    """
+    Base JSON-first undo command.
+    Stores before/after serializable state and applies snapshots through a callable.
+    """
+
+    command_type = "json_state"
+
+    def __init__(self, screen_id, before_state, after_state, apply_state_callable, description="Update State"):
+        super().__init__(description)
+        self.screen_id = screen_id
+        self.before_state = copy.deepcopy(before_state)
+        self.after_state = copy.deepcopy(after_state)
+        self.apply_state_callable = apply_state_callable
+
+    def _apply(self, state):
+        if callable(self.apply_state_callable):
+            self.apply_state_callable(self.screen_id, copy.deepcopy(state))
+
+    def redo(self):
+        self._apply(self.after_state)
+
+    def undo(self):
+        self._apply(self.before_state)
+
+    def to_history_metadata(self):
+        return {
+            "type": self.command_type,
+            "screen_id": self.screen_id,
+            "before": copy.deepcopy(self.before_state),
+            "after": copy.deepcopy(self.after_state),
+            "description": self.text(),
+        }
+
+
+class AddObjectJsonCommand(JsonStateCommand):
+    command_type = "add_object"
+
+
+class DeleteObjectJsonCommand(JsonStateCommand):
+    command_type = "delete_object"
+
+
+class UpdateObjectPropertyJsonCommand(JsonStateCommand):
+    command_type = "update_object_property"
+
+
+class DeleteScreenJsonCommand(JsonStateCommand):
+    command_type = "delete_screen"
+
+
 class TransformItemsCommand(QUndoCommand):
     """
     Command for transforming graphic items (move, resize, rotate).

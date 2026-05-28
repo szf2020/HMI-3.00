@@ -7,6 +7,9 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QUndoGroup, QUndoStack
 from PySide6.QtCore import QObject, Signal
 from enum import Enum, auto
+from datetime import datetime, timezone
+from pathlib import Path
+import json
 import copy
 
 from debug_utils import get_logger
@@ -77,6 +80,13 @@ class EditService(QObject):
         
         # Map of widget/document IDs to their undo stacks
         self._undo_stacks = {}
+
+        # JSON action-history persistence
+        self._history_persistence_enabled = False
+        self._history_file_path = Path("action_history.json")
+        self._history_schema_version = 1
+        self._max_history_actions = 500
+        self._history_by_stack = {}
         
         # Connect undo group signals
         self.undo_group.canUndoChanged.connect(self._on_can_undo_changed)
@@ -206,6 +216,70 @@ class EditService(QObject):
         """Returns the currently active QUndoStack."""
         return self.undo_group.activeStack()
     
+
+    def configure_history_persistence(self, enabled=False, file_path=None, max_actions=500):
+        """Configure JSON history persistence behavior."""
+        self._history_persistence_enabled = bool(enabled)
+        if file_path:
+            self._history_file_path = Path(file_path)
+        self._max_history_actions = max(1, int(max_actions))
+
+    def _command_to_metadata(self, command):
+        metadata = {
+            "type": command.__class__.__name__,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "screen_id": None,
+            "before": None,
+            "after": None,
+            "description": command.text() if hasattr(command, "text") else str(command),
+        }
+
+        if hasattr(command, "to_history_metadata") and callable(command.to_history_metadata):
+            try:
+                command_metadata = command.to_history_metadata() or {}
+                metadata.update({k: command_metadata.get(k, v) for k, v in metadata.items() if k != "timestamp"})
+                for key in ("type", "screen_id", "before", "after", "description"):
+                    if key in command_metadata:
+                        metadata[key] = command_metadata[key]
+            except Exception:
+                logger.exception("Failed extracting command history metadata")
+
+        return metadata
+
+    def _bounded(self, entries):
+        if len(entries) <= self._max_history_actions:
+            return entries
+        return entries[-self._max_history_actions:]
+
+    def _persist_action_history(self, stack_id, stack):
+        if not self._history_persistence_enabled or not stack:
+            return
+
+        stack_data = self._history_by_stack.setdefault(stack_id, {"undo_stack": [], "redo_stack": []})
+        undo_entries = []
+        redo_entries = []
+        current_index = stack.index()
+        for i in range(stack.count()):
+            cmd = stack.command(i)
+            metadata = self._command_to_metadata(cmd)
+            if i < current_index:
+                undo_entries.append(metadata)
+            else:
+                redo_entries.append(metadata)
+
+        stack_data["undo_stack"] = self._bounded(undo_entries)
+        stack_data["redo_stack"] = self._bounded(redo_entries)
+
+        payload = {
+            "schema_version": self._history_schema_version,
+            "stack_id": stack_id,
+            "undo_stack": stack_data["undo_stack"],
+            "redo_stack": stack_data["redo_stack"],
+        }
+        self._history_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._history_file_path.open("w", encoding="utf-8") as fp:
+            json.dump(payload, fp, ensure_ascii=False, indent=2)
+
     def create_undo_stack(self, stack_id, parent=None):
         """
         Creates and registers a new QUndoStack.
@@ -226,13 +300,21 @@ class EditService(QObject):
     def undo(self):
         """Performs undo on the active stack."""
         if self.undo_group.canUndo():
+            stack = self.undo_group.activeStack()
             self.undo_group.undo()
+            if stack is not None:
+                stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
+                self._persist_action_history(stack_id, stack)
             logger.debug("Undo performed")
     
     def redo(self):
         """Performs redo on the active stack."""
         if self.undo_group.canRedo():
+            stack = self.undo_group.activeStack()
             self.undo_group.redo()
+            if stack is not None:
+                stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
+                self._persist_action_history(stack_id, stack)
             logger.debug("Redo performed")
     
     def can_undo(self):
@@ -259,14 +341,17 @@ class EditService(QObject):
             command: QUndoCommand to push
             stack_id: Optional stack ID. If None, uses active stack.
         """
+        target_stack_id = stack_id
         if stack_id:
             stack = self._undo_stacks.get(stack_id)
-            if stack:
-                stack.push(command)
         else:
             stack = self.undo_group.activeStack()
-            if stack:
-                stack.push(command)
+            if stack is not None:
+                target_stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
+
+        if stack:
+            stack.push(command)
+            self._persist_action_history(target_stack_id or "active", stack)
 
     # ========== Signal Handlers ==========
     
