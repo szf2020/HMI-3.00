@@ -5,12 +5,11 @@ from PySide6.QtCore import Qt, QRectF, Signal, QPoint, QPointF, QLineF
 from styles import colors
 
 from screen.base.base_graphic_object import RectangleObject, EllipseObject, BaseGraphicObject
-from services.screen_schema import build_screen_document, validate_serialized_object
 from screen.context_menu import ScreenContextMenu
-from services.edit_service import EditService
+from services.edit_service import EditService, ClipboardDataType
 from services.undo_commands import (
     AddItemCommand, RemoveItemCommand, MoveItemsCommand, 
-    DuplicateItemsCommand, ZOrderCommand,
+    PasteItemsCommand, DuplicateItemsCommand, ZOrderCommand,
     GroupItemsCommand, UngroupItemsCommand
 )
 from debug_utils import get_logger
@@ -244,39 +243,36 @@ class CanvasBaseScreen(QGraphicsView):
 
     def _restore_items(self):
         """Restores graphical items from the screen data."""
-        objects = self.screen_data.get('objects', self.screen_data.get('items', []))
-        for item_data in objects:
+        if 'items' in self.screen_data:
+            for item_data in self.screen_data['items']:
                 # Pass is_restoring=True to prevent signal emission during restore
                 self.create_graphic_item_from_data(item_data, is_restoring=True)
 
     def save_items(self):
         """Saves current graphical items to screen data."""
         logger.debug("Saving items to screen data.")
-        serialized_objects = []
+        items_list = []
         try:
             for item in self.scene.items():
                 if not isinstance(item, BaseGraphicObject):
                     continue
 
-                item.ensure_object_id()
-                payload = item.to_json_dict()
-                if validate_serialized_object(payload):
-                    serialized_objects.append(payload)
-                else:
-                    logger.error("Skipping invalid serialized object for write.")
+                item_data = item.data(Qt.ItemDataRole.UserRole)
+                if item_data:
+                    rect = item.boundingRect()
+                    item_data['rect'] = [rect.x(), rect.y(), rect.width(), rect.height()]
+                    item_data['pos'] = [item.pos().x(), item.pos().y()]
+                    
+                    # Save corner radii for rectangles
+                    if hasattr(item, 'corner_radii'):
+                        item_data['corner_radii'] = item.corner_radii
+                    if hasattr(item, 'rounded_enabled'):
+                        item_data['rounded_enabled'] = item.rounded_enabled
+                    
+                    items_list.append(item_data)
 
-            document = build_screen_document(
-                name=self.screen_data.get('name', 'Untitled'),
-                bg_color=self.screen_data.get('background_color', '#FFFFFF'),
-                width=self.screen_data.get('width', 0),
-                height=self.screen_data.get('height', 0),
-                objects=serialized_objects,
-            )
-            self.screen_data['schema_version'] = document['schema_version']
-            self.screen_data['metadata'] = document['metadata']
-            self.screen_data['objects'] = document['objects']
-            self.screen_data['items'] = document['objects']
-            logger.debug(f"Saved {len(serialized_objects)} items.")
+            self.screen_data['items'] = items_list
+            logger.debug(f"Saved {len(items_list)} items.")
             self.project_service.mark_as_unsaved()
         except Exception as e:
             logger.error(f"CRITICAL: Error saving items: {e}", exc_info=True)
@@ -288,17 +284,13 @@ class CanvasBaseScreen(QGraphicsView):
             data: Dictionary with item properties (type, rect, pos, etc.)
             is_restoring: If True, don't emit graphics_item_added signal (used when loading saved items)
         """
-        item_type = data.get('object_type', data.get('type'))
+        item_type = data.get('type')
         item = None
         if 'lock_aspect_ratio' not in data:
             data['lock_aspect_ratio'] = False
         
-        geometry = data.get('geometry')
-        if geometry:
-            rect = QRectF(0, 0, geometry.get('width', 0), geometry.get('height', 0))
-        else:
-            rect_data = data['rect']
-            rect = QRectF(rect_data[0], rect_data[1], rect_data[2], rect_data[3])
+        rect_data = data['rect']
+        rect = QRectF(rect_data[0], rect_data[1], rect_data[2], rect_data[3])
         
         if item_type == 'rectangle':
             item = RectangleObject(rect, self.view_service, self)
@@ -312,11 +304,8 @@ class CanvasBaseScreen(QGraphicsView):
             item = EllipseObject(rect, self.view_service, self)
         
         if item:
-            if 'geometry' in data:
-                item.apply_json_dict(data)
-            else:
-                pos_data = data.get('pos', [0, 0])
-                item.setPos(pos_data[0], pos_data[1])
+            pos_data = data.get('pos', [0, 0])
+            item.setPos(pos_data[0], pos_data[1])
             
             # Common properties
             item.setFlags(
@@ -325,7 +314,6 @@ class CanvasBaseScreen(QGraphicsView):
                 QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
             )
             item.setData(Qt.ItemDataRole.UserRole, data)
-            item.ensure_object_id()
             
             # Restore pen, brush, and other visual properties from data
             # Use stored properties if available, otherwise use defaults
@@ -1274,76 +1262,75 @@ class CanvasBaseScreen(QGraphicsView):
 
     def cut(self):
         """Cut selected items to clipboard."""
-        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, BaseGraphicObject)]
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             logger.debug("Cut: No items selected")
             return
-
-        self.edit_service.set_active_stack(self._stack_id)
-        self.edit_service.cut_objects(
-            selected_items,
-            delete_command_factory=lambda: RemoveItemCommand(self, selected_items, "Cut Items"),
-        )
+        
+        # Copy items data to clipboard
+        items_data = []
+        for item in selected_items:
+            data_copy = self._serialize_item_for_clipboard(item)
+            if data_copy:
+                items_data.append(data_copy)
+        
+        # Store in clipboard with cut flag
+        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=True)
+        
+        # Delete items using undo command
+        command = RemoveItemCommand(self, selected_items, "Cut Items")
+        self.undo_stack.push(command)
+        
         logger.debug(f"Cut {len(selected_items)} items")
 
     def copy(self):
         """Copy selected items to clipboard."""
-        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, BaseGraphicObject)]
+        selected_items = [item for item in self.scene.selectedItems() 
+                         if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             logger.debug("Copy: No items selected")
             return
-
-        self.edit_service.copy_objects(selected_items)
+        
+        # Copy items data to clipboard
+        items_data = []
+        for item in selected_items:
+            data_copy = self._serialize_item_for_clipboard(item)
+            if data_copy:
+                items_data.append(data_copy)
+        
+        # Store in clipboard (not a cut operation)
+        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=False)
+        
         logger.debug(f"Copied {len(selected_items)} items")
 
     def paste(self):
         """Paste items from clipboard."""
-        self.edit_service.set_active_stack(self._stack_id)
-        screen_id = str(self.screen_data.get('id') or self.screen_data.get('name') or self._stack_id)
-
-        def get_screen_state(_screen_id):
-            return copy.deepcopy(self.screen_data)
-
-        def save_screen_state(_screen_id, data):
-            self.screen_data.clear()
-            self.screen_data.update(copy.deepcopy(data))
-            if self.project_service and self.project_service.project_metadata:
-                self.project_service.storage.save_screen(self.project_service.project_metadata.project_path, _screen_id, data)
-
-        def apply_screen_state(_screen_id, state):
-            self.scene.clear()
-            self.screen_data.clear()
-            self.screen_data.update(copy.deepcopy(state))
-            self.scene.addItem(self.canvas_widget)
-            self._restore_items()
-            self.save_items()
-
-        def create_object(data):
-            return self.create_graphic_item_from_data(data)
-
-        def set_selection_focus(items):
-            self.scene.clearSelection()
-            for item in items:
-                item.setSelected(True)
-            if items:
-                self.setFocus()
-                self.refresh_transform_handler()
-
-        pasted_items = self.edit_service.paste_objects(
-            screen_id,
-            offset=(10, 10),
-            get_screen_state=get_screen_state,
-            save_screen=save_screen_state,
-            create_object=create_object,
-            apply_screen_state=apply_screen_state,
-            mark_dirty=self.project_service.mark_as_unsaved,
-            set_selection_focus=set_selection_focus,
-        )
-
-        if pasted_items:
-            logger.debug(f"Pasted {len(pasted_items)} items")
-        else:
+        clipboard_data, data_type, is_cut = self.edit_service.get_clipboard()
+        
+        if data_type != ClipboardDataType.CANVAS_ITEMS or not clipboard_data:
             logger.debug("Paste: No canvas items in clipboard")
+            return
+        
+        paste_anchor, paste_offset = self._calculate_paste_position(clipboard_data)
+
+        # Use paste command for undo support (single stack step)
+        command = PasteItemsCommand(
+            self,
+            clipboard_data,
+            offset=paste_offset,
+            anchor=paste_anchor,
+            description="Paste Items",
+        )
+        self.undo_stack.push(command)
+        self._last_paste_anchor = QPointF(paste_anchor)
+        self._paste_count += 1
+        
+        # If this was a cut operation, mark it as completed so subsequent pastes don't re-delete
+        if is_cut:
+            self.edit_service.mark_cut_completed()
+        
+        logger.debug(f"Pasted {len(clipboard_data)} items")
 
     def _calculate_paste_position(self, clipboard_data):
         """Compute paste anchor and offset with snapping awareness."""

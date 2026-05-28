@@ -1,9 +1,8 @@
 # screen\base\base_graphic_object.py
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsItem, QGraphicsPathItem
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QRectF
 from PySide6.QtGui import QPainterPath, QPen, QBrush
 from debug_utils import get_logger
-from screen.base.serializable_graphic_mixin import SerializableGraphicMixin
 
 logger = get_logger(__name__)
 
@@ -18,7 +17,7 @@ class HiddenQGraphicsRectItem(QGraphicsRectItem):
         pass
 
 
-class BaseGraphicObject(QGraphicsItem, SerializableGraphicMixin):
+class BaseGraphicObject(QGraphicsItem):
     """
     Abstract base class for all drawable objects on the canvas.
     It defines a common interface for geometric transformations.
@@ -36,21 +35,6 @@ class BaseGraphicObject(QGraphicsItem, SerializableGraphicMixin):
         # Make this item hit-testable based on its children's shapes
         # This is critical for composed items where the parent is a container
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemContainsChildrenInShape, True)
-
-        self.ensure_object_id()
-
-    def _item_type(self):
-        return self.__class__.__name__.replace("Object", "").lower()
-
-    def to_json_dict(self) -> dict:
-        raise NotImplementedError("to_json_dict must be implemented by subclasses.")
-
-    def apply_json_dict(self, data: dict) -> None:
-        raise NotImplementedError("apply_json_dict must be implemented by subclasses.")
-
-    @classmethod
-    def from_json_dict(cls, data, scene_context) -> "BaseGraphicObject":
-        raise NotImplementedError("from_json_dict must be implemented by subclasses.")
 
     def boundingRect(self):
         return self.item.boundingRect()
@@ -276,70 +260,6 @@ class RectangleObject(BaseGraphicObject):
             painter.restore()
 
 
-    def to_json_dict(self) -> dict:
-        self.ensure_object_id()
-        rect = self.rect_item.rect()
-        data = self.data(Qt.ItemDataRole.UserRole) or {}
-        pen = self.item.pen()
-        brush = self.item.brush()
-        styling = {
-            "fill_type": "solid",
-            "fill_color": brush.color().name(),
-            "outline_color": pen.color().name(),
-            "outline_width": pen.widthF(),
-            "opacity": self.opacity(),
-            "alignment": data.get("alignment"),
-            "font": data.get("font"),
-            "rounded_enabled": self.rounded_enabled,
-            "corner_radii": self.corner_radii,
-        }
-        return self.canonical_document(
-            object_id=data.get("object_id"),
-            object_type="rectangle",
-            geometry={"x": self.x(), "y": self.y(), "width": rect.width(), "height": rect.height(), "rotation": self.rotation()},
-            styling=styling,
-            data_links=data.get("data_links") or {"tags": [], "comments": []},
-            z_index=self.zValue(),
-            locked=not bool(self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable),
-            visible=self.isVisible(),
-            custom_props=data.get("custom_props") or {},
-        )
-
-    def apply_json_dict(self, data: dict) -> None:
-        geometry = data.get("geometry", {})
-        styling = data.get("styling", {})
-        self.set_geometry(QRectF(0, 0, geometry.get("width", 0), geometry.get("height", 0)))
-        self.setPos(geometry.get("x", 0), geometry.get("y", 0))
-        self.setRotation(geometry.get("rotation", 0))
-        pen = self.item.pen()
-        brush = self.item.brush()
-        if styling.get("outline_color"):
-            from PySide6.QtGui import QColor
-            pen.setColor(QColor(styling.get("outline_color")))
-        if styling.get("outline_width") is not None:
-            pen.setWidthF(float(styling.get("outline_width")))
-        if styling.get("fill_color"):
-            from PySide6.QtGui import QColor
-            brush.setColor(QColor(styling.get("fill_color")))
-        self.item.setPen(pen)
-        self.item.setBrush(brush)
-        if styling.get("opacity") is not None:
-            self.setOpacity(float(styling.get("opacity")))
-        self.rounded_enabled = bool(styling.get("rounded_enabled", False))
-        self.corner_radii = styling.get("corner_radii", [0.0, 0.0, 0.0, 0.0])
-        payload = self.data(Qt.ItemDataRole.UserRole) or {}
-        payload.update(data)
-        self.setData(Qt.ItemDataRole.UserRole, payload)
-        self.ensure_object_id()
-
-    @classmethod
-    def from_json_dict(cls, data, scene_context) -> "RectangleObject":
-        geom = data.get("geometry", {})
-        item = cls(QRectF(0, 0, geom.get("width", 0), geom.get("height", 0)), scene_context.view_service, scene_context)
-        item.apply_json_dict(data)
-        return item
-
-
 class EllipseObject(BaseGraphicObject):
     """
     A concrete implementation for an ellipse object.
@@ -363,64 +283,7 @@ class EllipseObject(BaseGraphicObject):
             logger.error(f"CRITICAL: Error in EllipseObject.set_geometry: {e}", exc_info=True)
 
     
-    def to_json_dict(self) -> dict:
-        self.ensure_object_id()
-        rect = self.ellipse_item.rect()
-        data = self.data(Qt.ItemDataRole.UserRole) or {}
-        pen = self.item.pen()
-        brush = self.item.brush()
-        styling = {
-            "fill_type": "solid",
-            "fill_color": brush.color().name(),
-            "outline_color": pen.color().name(),
-            "outline_width": pen.widthF(),
-            "opacity": self.opacity(),
-            "alignment": data.get("alignment"),
-            "font": data.get("font"),
-        }
-        return self.canonical_document(
-            object_id=data.get("object_id"),
-            object_type="ellipse",
-            geometry={"x": self.x(), "y": self.y(), "width": rect.width(), "height": rect.height(), "rotation": self.rotation()},
-            styling=styling,
-            data_links=data.get("data_links") or {"tags": [], "comments": []},
-            z_index=self.zValue(),
-            locked=not bool(self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable),
-            visible=self.isVisible(),
-            custom_props=data.get("custom_props") or {},
-        )
-
-    def apply_json_dict(self, data: dict) -> None:
-        geometry = data.get("geometry", {})
-        styling = data.get("styling", {})
-        self.set_geometry(QRectF(0, 0, geometry.get("width", 0), geometry.get("height", 0)))
-        self.setPos(geometry.get("x", 0), geometry.get("y", 0))
-        self.setRotation(geometry.get("rotation", 0))
-        pen = self.item.pen()
-        brush = self.item.brush()
-        if styling.get("outline_color"):
-            from PySide6.QtGui import QColor
-            pen.setColor(QColor(styling.get("outline_color")))
-        if styling.get("outline_width") is not None:
-            pen.setWidthF(float(styling.get("outline_width")))
-        if styling.get("fill_color"):
-            from PySide6.QtGui import QColor
-            brush.setColor(QColor(styling.get("fill_color")))
-        self.item.setPen(pen)
-        self.item.setBrush(brush)
-        if styling.get("opacity") is not None:
-            self.setOpacity(float(styling.get("opacity")))
-        payload = self.data(Qt.ItemDataRole.UserRole) or {}
-        payload.update(data)
-        self.setData(Qt.ItemDataRole.UserRole, payload)
-        self.ensure_object_id()
-
-    @classmethod
-    def from_json_dict(cls, data, scene_context) -> "EllipseObject":
-        geom = data.get("geometry", {})
-        item = cls(QRectF(0, 0, geom.get("width", 0), geom.get("height", 0)), scene_context.view_service, scene_context)
-        item.apply_json_dict(data)
-        return item
-
     def paint(self, painter, option, widget):
+        # We need to explicitly call the composed item's paint method
+        # if we want it to be rendered.
         self.item.paint(painter, option, widget)

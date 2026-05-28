@@ -1,7 +1,7 @@
 # main_window\main_window.py
 import sys
 from PySide6.QtWidgets import QMainWindow, QCheckBox, QTextEdit, QMessageBox, QFileDialog, QTabWidget, QApplication, QLineEdit, QLabel, QStatusBar, QWidget, QHBoxLayout
-from PySide6.QtCore import Qt, QSize, QByteArray, QTimer
+from PySide6.QtCore import Qt, QSize, QByteArray
 from PySide6.QtGui import QAction, QActionGroup
 
 # Import the menu classes from the new modules
@@ -62,16 +62,6 @@ class MainWindow(QMainWindow):
         self.open_comments = {} # Dictionary to track open comment tables {comment_number: widget}
         self.open_tags = {} # Dictionary to track open tag tables {tag_number: widget}
 
-        # Debounced autosave state
-        self._autosave_timer = QTimer(self)
-        self._autosave_timer.setSingleShot(True)
-        self._autosave_timer.setInterval(200)
-        self._autosave_timer.timeout.connect(self._flush_autosave)
-        self._autosave_reentry_guard = False
-        self._autosave_retry_attempts = 0
-        self._max_autosave_retries = 3
-        self._pending_autosave_reasons = set()
-        self._suspend_autosave_signals = False
 
         # Set the window title
         self.update_window_title()
@@ -179,60 +169,6 @@ class MainWindow(QMainWindow):
         """Slot to handle modifications to the project."""
         self.project_service.mark_as_unsaved()
         self.update_window_title()
-        self.schedule_state_save("project_modified")
-
-    def schedule_state_save(self, reason: str):
-        """Debounces and schedules persistent background save of project state."""
-        if self._suspend_autosave_signals:
-            return
-        self._pending_autosave_reasons.add(reason)
-        self._autosave_timer.start()
-
-    def _flush_autosave(self, force=False):
-        """Flushes dirty in-memory state to storage with bounded retry on failure."""
-        if self._autosave_reentry_guard:
-            return True
-        if not self.project_service.project_metadata and not self.project_service.file_path:
-            return True
-
-        self._autosave_reentry_guard = True
-        try:
-            # Serialize open canvas state and table data into project_data
-            for screen_widget in self.open_screens.values():
-                if isinstance(screen_widget, CanvasBaseScreen):
-                    screen_widget.save_items()
-
-            for comment_widget in self.open_comments.values():
-                if isinstance(comment_widget, CommentTable):
-                    comment_widget.table_widget.save_data_to_service()
-
-            for tag_widget in self.open_tags.values():
-                if isinstance(tag_widget, TagTable):
-                    tag_widget.save_data()
-
-            self.prepare_project_data()
-            success, message = self.project_service.save_project()
-            if success:
-                self._autosave_retry_attempts = 0
-                self._pending_autosave_reasons.clear()
-                self.update_window_title()
-                return True
-
-            raise RuntimeError(message)
-        except Exception as exc:
-            self._autosave_retry_attempts += 1
-            warning = QMessageBox(self)
-            warning.setIcon(QMessageBox.Icon.Warning)
-            warning.setWindowTitle("Autosave Warning")
-            warning.setText(f"Autosave failed: {exc}")
-            warning.setStandardButtons(QMessageBox.StandardButton.Ok)
-            warning.setModal(False)
-            warning.show()
-            if self._autosave_retry_attempts <= self._max_autosave_retries:
-                QTimer.singleShot(min(2000 * self._autosave_retry_attempts, 5000), self._autosave_timer.start)
-            return False
-        finally:
-            self._autosave_reentry_guard = False
 
     def get_project_content(self):
         """Gets the current project content. (Placeholder for multi-screen)"""
@@ -364,9 +300,6 @@ class MainWindow(QMainWindow):
             screen_widget.object_data_changed.connect(obj_props_toolbar.on_object_data_changed)
 
         screen_widget.canvas_selection_changed.connect(self._on_canvas_selection_changed)
-        screen_widget.graphics_item_added.connect(lambda *_: self.schedule_state_save("canvas_item_added"))
-        screen_widget.graphics_item_removed.connect(lambda *_: self.schedule_state_save("canvas_item_removed"))
-        screen_widget.undo_stack.indexChanged.connect(lambda *_: self.schedule_state_save("canvas_undo_redo_or_transform"))
         
         if screen_type == 'base':
             tab_title = f"[B] - {screen_number} - {screen_data.get('name')}"
@@ -411,8 +344,6 @@ class MainWindow(QMainWindow):
         self.central_widget.setTabIcon(index, icon)
 
         self.open_comments[comment_number] = comment_widget
-        if hasattr(comment_widget, "table_widget") and hasattr(comment_widget.table_widget, "itemChanged"):
-            comment_widget.table_widget.itemChanged.connect(lambda *_: self.schedule_state_save("comment_table_changed"))
         self.central_widget.setCurrentWidget(comment_widget)
 
     def open_tag_table(self, tag_data):
@@ -438,8 +369,6 @@ class MainWindow(QMainWindow):
         self.central_widget.setTabIcon(index, icon)
 
         self.open_tags[tag_number] = tag_widget
-        if hasattr(tag_widget, "table") and hasattr(tag_widget.table, "itemChanged"):
-            tag_widget.table.itemChanged.connect(lambda *_: self.schedule_state_save("tag_table_changed"))
         self.central_widget.setCurrentWidget(tag_widget)
 
 
@@ -884,22 +813,12 @@ class MainWindow(QMainWindow):
     def undo_active_widget(self):
         widget = self.get_focused_widget_for_edit()
         if hasattr(widget, 'undo'):
-            self._suspend_autosave_signals = True
-            try:
-                widget.undo()
-            finally:
-                self._suspend_autosave_signals = False
-            self.schedule_state_save("undo")
+            widget.undo()
 
     def redo_active_widget(self):
         widget = self.get_focused_widget_for_edit()
         if hasattr(widget, 'redo'):
-            self._suspend_autosave_signals = True
-            try:
-                widget.redo()
-            finally:
-                self._suspend_autosave_signals = False
-            self.schedule_state_save("redo")
+            widget.redo()
 
     def cut_active_widget(self):
         widget = self.get_focused_widget_for_edit()
@@ -1277,10 +1196,6 @@ class MainWindow(QMainWindow):
         Args:
             event (QCloseEvent): The close event.
         """
-        if self._autosave_timer.isActive():
-            self._autosave_timer.stop()
-            self._flush_autosave(force=True)
-
         if self.prompt_to_save():
             # Clear all graphics selections before saving state to avoid QVariant serialization errors
             # Qt tries to serialize selected graphics items as QVariant, which fails for QGraphicsItem* pointers

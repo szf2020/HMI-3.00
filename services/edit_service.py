@@ -7,14 +7,9 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QUndoGroup, QUndoStack
 from PySide6.QtCore import QObject, Signal
 from enum import Enum, auto
-from datetime import datetime, timezone
-from pathlib import Path
-import json
 import copy
-import uuid
 
 from debug_utils import get_logger
-from services.undo_commands import AddObjectJsonCommand, DeleteObjectJsonCommand
 
 logger = get_logger(__name__)
 
@@ -76,22 +71,12 @@ class EditService(QObject):
         self._clipboard_data = None
         self._clipboard_type = ClipboardDataType.NONE
         self._is_cut_operation = False  # Track if clipboard data is from a cut operation
-
-        self._clipboard_schema_version = 1
-        self._canvas_paste_cascade_count = 0
         
         # QUndoGroup to manage multiple undo stacks
         self.undo_group = QUndoGroup(self)
         
         # Map of widget/document IDs to their undo stacks
         self._undo_stacks = {}
-
-        # JSON action-history persistence
-        self._history_persistence_enabled = False
-        self._history_file_path = Path("action_history.json")
-        self._history_schema_version = 1
-        self._max_history_actions = 500
-        self._history_by_stack = {}
         
         # Connect undo group signals
         self.undo_group.canUndoChanged.connect(self._on_can_undo_changed)
@@ -153,87 +138,6 @@ class EditService(QObject):
         self.clipboard_changed.emit(ClipboardDataType.NONE)
         logger.debug("Clipboard cleared")
     
-    def _build_canvas_payload_envelope(self, objects):
-        return {
-            "mime": "application/x-hmi-object-json",
-            "schema_version": self._clipboard_schema_version,
-            "objects": objects,
-        }
-
-    def copy_objects(self, objects, write_system_clipboard=True):
-        serialized = []
-        for obj in objects or []:
-            if hasattr(obj, "to_json_dict") and callable(obj.to_json_dict):
-                serialized.append(obj.to_json_dict())
-            elif isinstance(obj, dict):
-                serialized.append(copy.deepcopy(obj))
-
-        payload = self._build_canvas_payload_envelope(serialized)
-        self.set_clipboard(payload, ClipboardDataType.CANVAS_ITEMS, is_cut=False)
-        self._canvas_paste_cascade_count = 0
-        if write_system_clipboard and self.system_clipboard is not None:
-            self.system_clipboard.setText(json.dumps(payload))
-        return payload
-
-    def cut_objects(self, objects, delete_command_factory=None, write_system_clipboard=True):
-        payload = self.copy_objects(objects, write_system_clipboard=write_system_clipboard)
-        self._is_cut_operation = True
-
-        if callable(delete_command_factory):
-            delete_command = delete_command_factory()
-            active_stack = self.get_active_stack()
-            if delete_command and active_stack is not None:
-                active_stack.push(delete_command)
-        return payload
-
-    def paste_objects(self, active_screen_id, offset=(10, 10), *, get_screen_state, save_screen, create_object, apply_screen_state, mark_dirty, set_selection_focus=None):
-        clipboard_data, data_type, _ = self.get_clipboard()
-        if data_type != ClipboardDataType.CANVAS_ITEMS or not clipboard_data:
-            return []
-
-        payload = clipboard_data if isinstance(clipboard_data, dict) else {}
-        if payload.get("mime") != "application/x-hmi-object-json":
-            return []
-
-        before_state = copy.deepcopy(get_screen_state(active_screen_id))
-        if before_state is None:
-            return []
-
-        objects = copy.deepcopy(payload.get("objects", []))
-        dx = offset[0] + (self._canvas_paste_cascade_count * offset[0])
-        dy = offset[1] + (self._canvas_paste_cascade_count * offset[1])
-        pasted_objects = []
-        for obj in objects:
-            obj["id"] = str(uuid.uuid4())
-            geometry = obj.get("geometry")
-            if isinstance(geometry, dict):
-                geometry["x"] = geometry.get("x", 0) + dx
-                geometry["y"] = geometry.get("y", 0) + dy
-            else:
-                pos = obj.get("pos", [0, 0])
-                obj["pos"] = [float(pos[0]) + dx, float(pos[1]) + dy]
-            pasted_objects.append(obj)
-
-        after_state = copy.deepcopy(before_state)
-        after_state.setdefault("objects", [])
-        after_state["objects"].extend(pasted_objects)
-        after_state["items"] = copy.deepcopy(after_state["objects"])
-
-        save_screen(active_screen_id, after_state)
-
-        active_stack = self.get_active_stack()
-        if active_stack is not None:
-            active_stack.push(AddObjectJsonCommand(active_screen_id, before_state, after_state, apply_screen_state, "Add Object"))
-
-        created_items = [create_object(obj) for obj in pasted_objects]
-        created_items = [it for it in created_items if it is not None]
-
-        if callable(set_selection_focus):
-            set_selection_focus(created_items)
-        mark_dirty()
-        self._canvas_paste_cascade_count += 1
-        return created_items
-
     def mark_cut_completed(self):
         """
         Marks that a cut operation has been completed (items were deleted after paste).
@@ -302,70 +206,6 @@ class EditService(QObject):
         """Returns the currently active QUndoStack."""
         return self.undo_group.activeStack()
     
-
-    def configure_history_persistence(self, enabled=False, file_path=None, max_actions=500):
-        """Configure JSON history persistence behavior."""
-        self._history_persistence_enabled = bool(enabled)
-        if file_path:
-            self._history_file_path = Path(file_path)
-        self._max_history_actions = max(1, int(max_actions))
-
-    def _command_to_metadata(self, command):
-        metadata = {
-            "type": command.__class__.__name__,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "screen_id": None,
-            "before": None,
-            "after": None,
-            "description": command.text() if hasattr(command, "text") else str(command),
-        }
-
-        if hasattr(command, "to_history_metadata") and callable(command.to_history_metadata):
-            try:
-                command_metadata = command.to_history_metadata() or {}
-                metadata.update({k: command_metadata.get(k, v) for k, v in metadata.items() if k != "timestamp"})
-                for key in ("type", "screen_id", "before", "after", "description"):
-                    if key in command_metadata:
-                        metadata[key] = command_metadata[key]
-            except Exception:
-                logger.exception("Failed extracting command history metadata")
-
-        return metadata
-
-    def _bounded(self, entries):
-        if len(entries) <= self._max_history_actions:
-            return entries
-        return entries[-self._max_history_actions:]
-
-    def _persist_action_history(self, stack_id, stack):
-        if not self._history_persistence_enabled or not stack:
-            return
-
-        stack_data = self._history_by_stack.setdefault(stack_id, {"undo_stack": [], "redo_stack": []})
-        undo_entries = []
-        redo_entries = []
-        current_index = stack.index()
-        for i in range(stack.count()):
-            cmd = stack.command(i)
-            metadata = self._command_to_metadata(cmd)
-            if i < current_index:
-                undo_entries.append(metadata)
-            else:
-                redo_entries.append(metadata)
-
-        stack_data["undo_stack"] = self._bounded(undo_entries)
-        stack_data["redo_stack"] = self._bounded(redo_entries)
-
-        payload = {
-            "schema_version": self._history_schema_version,
-            "stack_id": stack_id,
-            "undo_stack": stack_data["undo_stack"],
-            "redo_stack": stack_data["redo_stack"],
-        }
-        self._history_file_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._history_file_path.open("w", encoding="utf-8") as fp:
-            json.dump(payload, fp, ensure_ascii=False, indent=2)
-
     def create_undo_stack(self, stack_id, parent=None):
         """
         Creates and registers a new QUndoStack.
@@ -386,21 +226,13 @@ class EditService(QObject):
     def undo(self):
         """Performs undo on the active stack."""
         if self.undo_group.canUndo():
-            stack = self.undo_group.activeStack()
             self.undo_group.undo()
-            if stack is not None:
-                stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
-                self._persist_action_history(stack_id, stack)
             logger.debug("Undo performed")
     
     def redo(self):
         """Performs redo on the active stack."""
         if self.undo_group.canRedo():
-            stack = self.undo_group.activeStack()
             self.undo_group.redo()
-            if stack is not None:
-                stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
-                self._persist_action_history(stack_id, stack)
             logger.debug("Redo performed")
     
     def can_undo(self):
@@ -427,17 +259,14 @@ class EditService(QObject):
             command: QUndoCommand to push
             stack_id: Optional stack ID. If None, uses active stack.
         """
-        target_stack_id = stack_id
         if stack_id:
             stack = self._undo_stacks.get(stack_id)
+            if stack:
+                stack.push(command)
         else:
             stack = self.undo_group.activeStack()
-            if stack is not None:
-                target_stack_id = next((sid for sid, s in self._undo_stacks.items() if s is stack), "active")
-
-        if stack:
-            stack.push(command)
-            self._persist_action_history(target_stack_id or "active", stack)
+            if stack:
+                stack.push(command)
 
     # ========== Signal Handlers ==========
     
