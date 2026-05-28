@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QRectF, Signal, QPoint, QPointF, QLineF
 from styles import colors
 
 from screen.base.base_graphic_object import RectangleObject, EllipseObject, BaseGraphicObject
+from services.screen_schema import build_screen_document, validate_serialized_object
 from screen.context_menu import ScreenContextMenu
 from services.edit_service import EditService, ClipboardDataType
 from services.undo_commands import (
@@ -243,36 +244,39 @@ class CanvasBaseScreen(QGraphicsView):
 
     def _restore_items(self):
         """Restores graphical items from the screen data."""
-        if 'items' in self.screen_data:
-            for item_data in self.screen_data['items']:
+        objects = self.screen_data.get('objects', self.screen_data.get('items', []))
+        for item_data in objects:
                 # Pass is_restoring=True to prevent signal emission during restore
                 self.create_graphic_item_from_data(item_data, is_restoring=True)
 
     def save_items(self):
         """Saves current graphical items to screen data."""
         logger.debug("Saving items to screen data.")
-        items_list = []
+        serialized_objects = []
         try:
             for item in self.scene.items():
                 if not isinstance(item, BaseGraphicObject):
                     continue
 
-                item_data = item.data(Qt.ItemDataRole.UserRole)
-                if item_data:
-                    rect = item.boundingRect()
-                    item_data['rect'] = [rect.x(), rect.y(), rect.width(), rect.height()]
-                    item_data['pos'] = [item.pos().x(), item.pos().y()]
-                    
-                    # Save corner radii for rectangles
-                    if hasattr(item, 'corner_radii'):
-                        item_data['corner_radii'] = item.corner_radii
-                    if hasattr(item, 'rounded_enabled'):
-                        item_data['rounded_enabled'] = item.rounded_enabled
-                    
-                    items_list.append(item_data)
+                item.ensure_object_id()
+                payload = item.to_json_dict()
+                if validate_serialized_object(payload):
+                    serialized_objects.append(payload)
+                else:
+                    logger.error("Skipping invalid serialized object for write.")
 
-            self.screen_data['items'] = items_list
-            logger.debug(f"Saved {len(items_list)} items.")
+            document = build_screen_document(
+                name=self.screen_data.get('name', 'Untitled'),
+                bg_color=self.screen_data.get('background_color', '#FFFFFF'),
+                width=self.screen_data.get('width', 0),
+                height=self.screen_data.get('height', 0),
+                objects=serialized_objects,
+            )
+            self.screen_data['schema_version'] = document['schema_version']
+            self.screen_data['metadata'] = document['metadata']
+            self.screen_data['objects'] = document['objects']
+            self.screen_data['items'] = document['objects']
+            logger.debug(f"Saved {len(serialized_objects)} items.")
             self.project_service.mark_as_unsaved()
         except Exception as e:
             logger.error(f"CRITICAL: Error saving items: {e}", exc_info=True)
@@ -284,13 +288,17 @@ class CanvasBaseScreen(QGraphicsView):
             data: Dictionary with item properties (type, rect, pos, etc.)
             is_restoring: If True, don't emit graphics_item_added signal (used when loading saved items)
         """
-        item_type = data.get('type')
+        item_type = data.get('object_type', data.get('type'))
         item = None
         if 'lock_aspect_ratio' not in data:
             data['lock_aspect_ratio'] = False
         
-        rect_data = data['rect']
-        rect = QRectF(rect_data[0], rect_data[1], rect_data[2], rect_data[3])
+        geometry = data.get('geometry')
+        if geometry:
+            rect = QRectF(0, 0, geometry.get('width', 0), geometry.get('height', 0))
+        else:
+            rect_data = data['rect']
+            rect = QRectF(rect_data[0], rect_data[1], rect_data[2], rect_data[3])
         
         if item_type == 'rectangle':
             item = RectangleObject(rect, self.view_service, self)
@@ -304,8 +312,11 @@ class CanvasBaseScreen(QGraphicsView):
             item = EllipseObject(rect, self.view_service, self)
         
         if item:
-            pos_data = data.get('pos', [0, 0])
-            item.setPos(pos_data[0], pos_data[1])
+            if 'geometry' in data:
+                item.apply_json_dict(data)
+            else:
+                pos_data = data.get('pos', [0, 0])
+                item.setPos(pos_data[0], pos_data[1])
             
             # Common properties
             item.setFlags(
@@ -314,6 +325,7 @@ class CanvasBaseScreen(QGraphicsView):
                 QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
             )
             item.setData(Qt.ItemDataRole.UserRole, data)
+            item.ensure_object_id()
             
             # Restore pen, brush, and other visual properties from data
             # Use stored properties if available, otherwise use defaults
