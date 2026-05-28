@@ -7,10 +7,10 @@ from styles import colors
 from screen.base.base_graphic_object import RectangleObject, EllipseObject, BaseGraphicObject
 from services.screen_schema import build_screen_document, validate_serialized_object
 from screen.context_menu import ScreenContextMenu
-from services.edit_service import EditService, ClipboardDataType
+from services.edit_service import EditService
 from services.undo_commands import (
     AddItemCommand, RemoveItemCommand, MoveItemsCommand, 
-    PasteItemsCommand, DuplicateItemsCommand, ZOrderCommand,
+    DuplicateItemsCommand, ZOrderCommand,
     GroupItemsCommand, UngroupItemsCommand
 )
 from debug_utils import get_logger
@@ -1274,75 +1274,76 @@ class CanvasBaseScreen(QGraphicsView):
 
     def cut(self):
         """Cut selected items to clipboard."""
-        selected_items = [item for item in self.scene.selectedItems() 
-                         if isinstance(item, BaseGraphicObject)]
+        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             logger.debug("Cut: No items selected")
             return
-        
-        # Copy items data to clipboard
-        items_data = []
-        for item in selected_items:
-            data_copy = self._serialize_item_for_clipboard(item)
-            if data_copy:
-                items_data.append(data_copy)
-        
-        # Store in clipboard with cut flag
-        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=True)
-        
-        # Delete items using undo command
-        command = RemoveItemCommand(self, selected_items, "Cut Items")
-        self.undo_stack.push(command)
-        
+
+        self.edit_service.set_active_stack(self._stack_id)
+        self.edit_service.cut_objects(
+            selected_items,
+            delete_command_factory=lambda: RemoveItemCommand(self, selected_items, "Cut Items"),
+        )
         logger.debug(f"Cut {len(selected_items)} items")
 
     def copy(self):
         """Copy selected items to clipboard."""
-        selected_items = [item for item in self.scene.selectedItems() 
-                         if isinstance(item, BaseGraphicObject)]
+        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, BaseGraphicObject)]
         if not selected_items:
             logger.debug("Copy: No items selected")
             return
-        
-        # Copy items data to clipboard
-        items_data = []
-        for item in selected_items:
-            data_copy = self._serialize_item_for_clipboard(item)
-            if data_copy:
-                items_data.append(data_copy)
-        
-        # Store in clipboard (not a cut operation)
-        self.edit_service.set_clipboard(items_data, ClipboardDataType.CANVAS_ITEMS, is_cut=False)
-        
+
+        self.edit_service.copy_objects(selected_items)
         logger.debug(f"Copied {len(selected_items)} items")
 
     def paste(self):
         """Paste items from clipboard."""
-        clipboard_data, data_type, is_cut = self.edit_service.get_clipboard()
-        
-        if data_type != ClipboardDataType.CANVAS_ITEMS or not clipboard_data:
-            logger.debug("Paste: No canvas items in clipboard")
-            return
-        
-        paste_anchor, paste_offset = self._calculate_paste_position(clipboard_data)
+        self.edit_service.set_active_stack(self._stack_id)
+        screen_id = str(self.screen_data.get('id') or self.screen_data.get('name') or self._stack_id)
 
-        # Use paste command for undo support (single stack step)
-        command = PasteItemsCommand(
-            self,
-            clipboard_data,
-            offset=paste_offset,
-            anchor=paste_anchor,
-            description="Paste Items",
+        def get_screen_state(_screen_id):
+            return copy.deepcopy(self.screen_data)
+
+        def save_screen_state(_screen_id, data):
+            self.screen_data.clear()
+            self.screen_data.update(copy.deepcopy(data))
+            if self.project_service and self.project_service.project_metadata:
+                self.project_service.storage.save_screen(self.project_service.project_metadata.project_path, _screen_id, data)
+
+        def apply_screen_state(_screen_id, state):
+            self.scene.clear()
+            self.screen_data.clear()
+            self.screen_data.update(copy.deepcopy(state))
+            self.scene.addItem(self.canvas_widget)
+            self._restore_items()
+            self.save_items()
+
+        def create_object(data):
+            return self.create_graphic_item_from_data(data)
+
+        def set_selection_focus(items):
+            self.scene.clearSelection()
+            for item in items:
+                item.setSelected(True)
+            if items:
+                self.setFocus()
+                self.refresh_transform_handler()
+
+        pasted_items = self.edit_service.paste_objects(
+            screen_id,
+            offset=(10, 10),
+            get_screen_state=get_screen_state,
+            save_screen=save_screen_state,
+            create_object=create_object,
+            apply_screen_state=apply_screen_state,
+            mark_dirty=self.project_service.mark_as_unsaved,
+            set_selection_focus=set_selection_focus,
         )
-        self.undo_stack.push(command)
-        self._last_paste_anchor = QPointF(paste_anchor)
-        self._paste_count += 1
-        
-        # If this was a cut operation, mark it as completed so subsequent pastes don't re-delete
-        if is_cut:
-            self.edit_service.mark_cut_completed()
-        
-        logger.debug(f"Pasted {len(clipboard_data)} items")
+
+        if pasted_items:
+            logger.debug(f"Pasted {len(pasted_items)} items")
+        else:
+            logger.debug("Paste: No canvas items in clipboard")
 
     def _calculate_paste_position(self, clipboard_data):
         """Compute paste anchor and offset with snapping awareness."""
