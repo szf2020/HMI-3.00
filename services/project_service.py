@@ -107,6 +107,66 @@ class ProjectService:
             return {}
         return self._read_json(self._screen_file(screen_name), {})
 
+    def register_services(self, tag_service=None, comment_service=None):
+        """Attach data services so entity changes can be synced immediately."""
+        if tag_service is not None:
+            self.tag_service = tag_service
+            if hasattr(tag_service, 'set_project_service'):
+                tag_service.set_project_service(self)
+        if comment_service is not None:
+            self.comment_service = comment_service
+            if hasattr(comment_service, 'set_project_service'):
+                comment_service.set_project_service(self)
+
+    def _tag_file(self, tag_number) -> Path:
+        return self.project_root / 'tags' / f'tag_{tag_number}.json'
+
+    def _comment_file(self, comment_number) -> Path:
+        return self.project_root / 'comments' / f'comment_{comment_number}.json'
+
+    def sync_tag(self, tag_number, tag_payload):
+        """Immediately write one tag payload to project_root/tags/tag_<number>.json."""
+        if tag_number is None:
+            return
+        if not self.project_root:
+            self.initialize_storage()
+        number_str = str(tag_number)
+        self.project_data.setdefault('tags', {})[number_str] = tag_payload
+        # Keep legacy consumers in sync while the app migrates to TagService.
+        self.project_data.setdefault('tag_lists', {})[number_str] = tag_payload
+        self._atomic_json_write(self._tag_file(number_str), {'tag': tag_payload})
+
+    def delete_tag(self, tag_number):
+        """Immediately delete project_root/tags/tag_<number>.json and in-memory references."""
+        if tag_number is None:
+            return
+        if not self.project_root:
+            self.initialize_storage()
+        number_str = str(tag_number)
+        self.project_data.setdefault('tags', {}).pop(number_str, None)
+        self.project_data.setdefault('tag_lists', {}).pop(number_str, None)
+        self._tag_file(number_str).unlink(missing_ok=True)
+
+    def sync_comment(self, comment_number, comment_payload):
+        """Immediately write one comment payload to project_root/comments/comment_<number>.json."""
+        if comment_number is None:
+            return
+        if not self.project_root:
+            self.initialize_storage()
+        number_str = str(comment_number)
+        self.project_data.setdefault('comments', {})[number_str] = comment_payload
+        self._atomic_json_write(self._comment_file(number_str), {'comment': comment_payload})
+
+    def delete_comment(self, comment_number):
+        """Immediately delete project_root/comments/comment_<number>.json and in-memory references."""
+        if comment_number is None:
+            return
+        if not self.project_root:
+            self.initialize_storage()
+        number_str = str(comment_number)
+        self.project_data.setdefault('comments', {}).pop(number_str, None)
+        self._comment_file(number_str).unlink(missing_ok=True)
+
     def save_structured_project_state(self):
         if not self.project_root:
             self.initialize_storage()
@@ -115,7 +175,15 @@ class ProjectService:
         tags_dir.mkdir(parents=True, exist_ok=True)
         comments_dir.mkdir(parents=True, exist_ok=True)
 
-        tags_data = self.project_data.get('tags', {}) or {}
+        tag_service = self.tag_service or getattr(getattr(self, 'main_window', None), 'tag_service', None)
+        comment_service = self.comment_service or getattr(getattr(self, 'main_window', None), 'comment_service', None)
+        if tag_service is not None:
+            self.project_data['tags'] = tag_service.get_all_data()
+            self.project_data['tag_lists'] = self.project_data['tags']
+        if comment_service is not None:
+            self.project_data['comments'] = comment_service.get_all_data()
+
+        tags_data = self.project_data.get('tags') or self.project_data.get('tag_lists', {}) or {}
         comments_data = self.project_data.get('comments', {}) or {}
 
         existing_tag_files = set(tags_dir.glob('tag_*.json'))
@@ -183,8 +251,15 @@ class ProjectService:
             project_name = Path(file_path).stem
             self.project_root = self._workspace_root / f"{self._sanitize_name(project_name)}_{self.project_id[:8]}"
             self.initialize_storage(project_name=project_name)
-            self.project_data['tags'] = self._load_entities_from_directory(self.project_root / 'tags', 'tag', 'tag')
-            self.project_data['comments'] = self._load_entities_from_directory(self.project_root / 'comments', 'comment', 'comment')
+            loaded_tags = self._load_entities_from_directory(self.project_root / 'tags', 'tag', 'tag')
+            loaded_comments = self._load_entities_from_directory(self.project_root / 'comments', 'comment', 'comment')
+            if loaded_tags:
+                self.project_data['tags'] = loaded_tags
+            else:
+                self.project_data['tags'] = self.project_data.get('tags') or self.project_data.get('tag_lists', {}) or {}
+            self.project_data['tag_lists'] = self.project_data['tags']
+            if loaded_comments:
+                self.project_data['comments'] = loaded_comments
             self.is_saved = True
             return True, "Project loaded successfully"
         except FileNotFoundError as e:

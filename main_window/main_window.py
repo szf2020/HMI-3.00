@@ -37,6 +37,7 @@ from styles import stylesheets
 from services.project_service import ProjectService
 from services.edit_service import EditService
 from services.comment_service import CommentService
+from services.tag_service import TagService
 from main_window.services.view_service import ViewService
 from screen.base.canvas_base_screen import CanvasBaseScreen
 from screen.base.base_graphic_object import BaseGraphicObject
@@ -55,7 +56,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings_service = settings_service
         self.project_service = ProjectService()
+        self.tag_service = TagService()
         self.comment_service = CommentService()
+        self.project_service.main_window = self
+        self.project_service.register_services(self.tag_service, self.comment_service)
         self.edit_service = EditService()
         self.view_service = ViewService(self)
         self.open_screens = {} # Dictionary to track open screens {(type, number): widget}
@@ -183,6 +187,7 @@ class MainWindow(QMainWindow):
         if not self.prompt_to_save():
             return
         self.project_service.new_project()
+        self.tag_service.clear_data()
         self.comment_service.clear_data()
         self.central_widget.clear()
         self.open_screens.clear()
@@ -193,6 +198,8 @@ class MainWindow(QMainWindow):
 
     def prepare_project_data(self):
         """Prepares project data for saving."""
+        self.project_service.project_data['tags'] = self.tag_service.get_all_data()
+        self.project_service.project_data['tag_lists'] = self.project_service.project_data['tags']
         self.project_service.project_data['comments'] = self.comment_service.get_all_data()
         # In the future, you would serialize open screens and other data here.
         self.project_service.project_data['content'] = self.get_project_content()
@@ -215,7 +222,9 @@ class MainWindow(QMainWindow):
 
                 # Load data into services and UI
                 project_data = self.project_service.project_data
+                self.tag_service.load_data(project_data.get('tags', project_data.get('tag_lists', {})))
                 self.comment_service.load_data(project_data.get('comments', {}))
+                self.project_service.save_structured_project_state()
                 self.project_tree.load_project_data(project_data)
                 
                 if project_data and 'content' in project_data:

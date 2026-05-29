@@ -112,7 +112,7 @@ class ProjectTreeDock(QDockWidget):
         # Load Comments
         comments_data = project_data.get('comments', {})
         for number_str, comment_obj in comments_data.items():
-            metadata = comment_obj.get('metadata')
+            metadata = comment_obj.get('metadata', comment_obj)
             if metadata:
                 comment_text = f"{metadata['number']} - {metadata['name']}"
                 new_item = QTreeWidgetItem(self.comment_item, [comment_text])
@@ -120,11 +120,12 @@ class ProjectTreeDock(QDockWidget):
                 new_item.setIcon(0, IconService.get_icon('common-comment'))
         
         # Load Tags
-        tags_data = project_data.get('tag_lists', {})
+        tags_data = project_data.get('tags', project_data.get('tag_lists', {}))
         for number_str, tag_obj in tags_data.items():
-             tag_text = f"{tag_obj['number']} - {tag_obj['name']}"
+             metadata = tag_obj.get('metadata', tag_obj)
+             tag_text = f"{metadata['number']} - {metadata['name']}"
              new_item = QTreeWidgetItem(self.tag_item, [tag_text])
-             new_item.setData(0, Qt.ItemDataRole.UserRole, tag_obj)
+             new_item.setData(0, Qt.ItemDataRole.UserRole, metadata)
              new_item.setIcon(0, IconService.get_icon('common-tags'))
         
         self.comment_item.setExpanded(True)
@@ -285,11 +286,7 @@ class ProjectTreeDock(QDockWidget):
         if dialog.exec():
             tag_data = dialog.get_tag_data()
             if tag_data:
-                # Save to Project Service
-                if 'tag_lists' not in self.main_window.project_service.project_data:
-                    self.main_window.project_service.project_data['tag_lists'] = {}
-                
-                self.main_window.project_service.project_data['tag_lists'][str(tag_data['number'])] = tag_data
+                self.main_window.tag_service.add_tag(tag_data)
                 self.main_window.project_modified()
                 
                 # Add item to tree
@@ -309,14 +306,9 @@ class ProjectTreeDock(QDockWidget):
         
         tag_number = str(item_data.get('number'))
         
-        # Fetch the LATEST data from ProjectService, not the potentially stale tree item data
-        project_data = self.main_window.project_service.project_data
-        if 'tag_lists' in project_data and tag_number in project_data['tag_lists']:
-            fresh_data = project_data['tag_lists'][tag_number]
-            self.main_window.open_tag_table(fresh_data)
-        else:
-            # Fallback in case of sync issue
-            self.main_window.open_tag_table(item_data)
+        # Fetch the LATEST data from TagService, not the potentially stale tree item data.
+        fresh_data = self.main_window.tag_service.get_tag(tag_number)
+        self.main_window.open_tag_table(fresh_data or item_data)
 
     def open_comment(self, item):
         comment_data = item.data(0, Qt.ItemDataRole.UserRole)
@@ -342,12 +334,18 @@ class ProjectTreeDock(QDockWidget):
         if item_type:
             self._clipboard = copy.deepcopy(data)
             self._clipboard['type'] = item_type
-            # For comments, also copy the table data
+            # Copy table data from the backing services so paste includes the latest rows.
             if item_type == 'comment':
                 comment_number = data.get('number')
                 if comment_number is not None:
                     table_data = self.comment_service.get_table_data(comment_number)
                     self._clipboard['table_data'] = copy.deepcopy(table_data)
+            elif item_type == 'tag':
+                tag_number = data.get('number')
+                if tag_number is not None and hasattr(self.main_window, 'tag_service'):
+                    table_data = self.main_window.tag_service.get_table_data(tag_number)
+                    self._clipboard['table_data'] = copy.deepcopy(table_data)
+                    self._clipboard['tags'] = copy.deepcopy(table_data)
 
     def paste_item(self, item):
         if not self._clipboard:
@@ -365,10 +363,7 @@ class ProjectTreeDock(QDockWidget):
             pasted_data['number'] = new_number
             pasted_data['name'] += " (copy)"
             
-            # Save to Project Service
-            if 'tag_lists' not in self.main_window.project_service.project_data:
-                 self.main_window.project_service.project_data['tag_lists'] = {}
-            self.main_window.project_service.project_data['tag_lists'][str(new_number)] = pasted_data
+            self.main_window.tag_service.add_tag(pasted_data)
             self.main_window.project_modified()
 
             tag_text = f"{pasted_data['number']} - {pasted_data['name']}"
@@ -415,8 +410,7 @@ class ProjectTreeDock(QDockWidget):
             updated_data['tags'] = tag_data.get('tags', [])
             updated_data['number'] = current_number # Keep original number
             
-            # Update Service
-            self.main_window.project_service.project_data['tag_lists'][str(current_number)] = updated_data
+            self.main_window.tag_service.update_tag_metadata(updated_data)
             self.main_window.project_modified()
 
             item.setData(0, Qt.ItemDataRole.UserRole, updated_data)
@@ -470,11 +464,8 @@ class ProjectTreeDock(QDockWidget):
             
             if parent == self.tag_item:
                 self.main_window.close_tag_tab_by_number(item_number)
-                # Remove from Project Service
-                if 'tag_lists' in self.main_window.project_service.project_data:
-                     if str(item_number) in self.main_window.project_service.project_data['tag_lists']:
-                         del self.main_window.project_service.project_data['tag_lists'][str(item_number)]
-                         self.main_window.project_modified()
+                self.main_window.tag_service.remove_tag(item_number)
+                self.main_window.project_modified()
 
             elif parent == self.comment_item:
                 self.main_window.close_comment_tab_by_number(item_number)
@@ -535,11 +526,7 @@ class ProjectTreeDock(QDockWidget):
                 if 'name' not in tag_data:
                     tag_data['name'] = f"Tag_{tag_data['number']}"
                 
-                # Save to Project Service
-                if 'tag_lists' not in self.main_window.project_service.project_data:
-                    self.main_window.project_service.project_data['tag_lists'] = {}
-                
-                self.main_window.project_service.project_data['tag_lists'][str(tag_data['number'])] = tag_data
+                self.main_window.tag_service.add_tag(tag_data)
                 
                 # Add item to tree
                 tag_text = f"{tag_data['number']} - {tag_data['name']}"
