@@ -13,7 +13,7 @@ class CommentService:
 
     def load_data(self, data):
         """Loads all comment data from a project file."""
-        self._comments_data = data if data is not None else {}
+        self._comments_data = data if isinstance(data, dict) else {}
 
     def get_all_data(self):
         """Returns all comment data for saving to a project file."""
@@ -40,7 +40,7 @@ class CommentService:
         if comment_number_str in self._comments_data:
             self._comments_data[comment_number_str]['table_data'] = table_data
         else:
-            logger.warning(f"Attempted to update data for non-existent comment {comment_number}")
+            self._comments_data[comment_number_str] = {'metadata': {'number': comment_number}, 'table_data': table_data}
 
     def add_comment(self, comment_metadata):
         """Adds a new comment with its metadata and an empty table."""
@@ -53,6 +53,7 @@ class CommentService:
                 'metadata': comment_metadata,
                 'table_data': []  # Initialize with empty data
             }
+            self._comments_data[number_str].update(comment_metadata)
 
     def remove_comment(self, comment_number):
         """Removes a comment from the service."""
@@ -68,6 +69,8 @@ class CommentService:
         number_str = str(number)
         if number_str in self._comments_data:
             self._comments_data[number_str]['metadata'] = comment_metadata
+            for key, value in comment_metadata.items():
+                self._comments_data[number_str][key] = value
 
     def clear_data(self):
         """Clears all comment data, used when creating a new project."""

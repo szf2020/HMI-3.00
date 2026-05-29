@@ -16,7 +16,7 @@ class TagService:
 
     def load_data(self, data):
         """Loads all tag data from a project file."""
-        self._tags_data = data if data is not None else {}
+        self._tags_data = data if isinstance(data, dict) else {}
 
     def get_all_data(self):
         """Returns all tag data for saving to a project file."""
@@ -43,7 +43,7 @@ class TagService:
         if tag_number_str in self._tags_data:
             self._tags_data[tag_number_str]['table_data'] = table_data
         else:
-            logger.warning(f"Attempted to update data for non-existent tag {tag_number}")
+            self._tags_data[tag_number_str] = {'metadata': {'number': tag_number}, 'table_data': table_data}
 
     def add_tag(self, tag_metadata):
         """Adds a new tag with its metadata and an empty table."""

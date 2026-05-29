@@ -1093,13 +1093,10 @@ class TagTable(QWidget):
             tags.append(self._get_row_data(row))
         
         self.tag_data['tags'] = tags
-        
-        # Check if project_service exists and is not None
+
+        tag_number = self.tag_data.get('number')
+        if tag_number is not None and hasattr(self.main_window, 'tag_service') and self.main_window.tag_service is not None:
+            self.main_window.tag_service.update_table_data(tag_number, tags)
+
         if hasattr(self.main_window, 'project_service') and self.main_window.project_service is not None:
-            tag_number = str(self.tag_data.get('number'))
-            if tag_number:
-                if 'tag_lists' not in self.main_window.project_service.project_data:
-                    self.main_window.project_service.project_data['tag_lists'] = {}
-                
-                self.main_window.project_service.project_data['tag_lists'][tag_number] = self.tag_data
-                self.main_window.project_service.mark_as_unsaved()
+            self.main_window.project_service.mark_as_unsaved()

@@ -1142,6 +1142,9 @@ class Spreadsheet(QTableWidget):
                 row_d.append(item.get_data() if item else {'value': ''})
             data.append(row_d)
         self.comment_service.update_table_data(self.comment_number, data)
+        parent_widget = self.parent()
+        if parent_widget and hasattr(parent_widget, 'main_window') and hasattr(parent_widget.main_window, 'project_service'):
+            parent_widget.main_window.project_service.mark_as_unsaved()
 
     def update_headers(self):
         self.setHorizontalHeaderLabels([col_int_to_str(i) for i in range(self.columnCount())])

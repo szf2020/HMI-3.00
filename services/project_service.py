@@ -21,6 +21,9 @@ class ProjectService:
         self.project_id = None
         self.project_root = None
         self._workspace_root = self._default_workspace_root()
+        self.main_window = None
+        self.tag_service = None
+        self.comment_service = None
 
     def _default_workspace_root(self) -> Path:
         return Path.cwd() / 'json_data'
@@ -71,6 +74,8 @@ class ProjectService:
             self.project_root = self._workspace_root / f"{safe_name}_{self.project_id[:8]}"
 
         (self.project_root / 'screens').mkdir(parents=True, exist_ok=True)
+        (self.project_root / 'tags').mkdir(parents=True, exist_ok=True)
+        (self.project_root / 'comments').mkdir(parents=True, exist_ok=True)
         default_settings = {
             'project_name': project_name,
             'project_id': self.project_id,
@@ -83,10 +88,6 @@ class ProjectService:
         }
         if not (self.project_root / 'settings.json').exists():
             self._atomic_json_write(self.project_root / 'settings.json', default_settings)
-        if not (self.project_root / 'tags.json').exists():
-            self._atomic_json_write(self.project_root / 'tags.json', {'tags': []})
-        if not (self.project_root / 'comments.json').exists():
-            self._atomic_json_write(self.project_root / 'comments.json', {'comments': []})
         if not (self.project_root / 'action_history.json').exists():
             self._atomic_json_write(self.project_root / 'action_history.json', {'undo': [], 'redo': []})
         if not (self.project_root / 'clipboard.json').exists():
@@ -109,8 +110,46 @@ class ProjectService:
     def save_structured_project_state(self):
         if not self.project_root:
             self.initialize_storage()
-        self._atomic_json_write(self.project_root / 'comments.json', {'comments': self.project_data.get('comments', {})})
-        self._atomic_json_write(self.project_root / 'tags.json', {'tags': self.project_data.get('tags', {})})
+        tags_dir = self.project_root / 'tags'
+        comments_dir = self.project_root / 'comments'
+        tags_dir.mkdir(parents=True, exist_ok=True)
+        comments_dir.mkdir(parents=True, exist_ok=True)
+
+        tags_data = self.project_data.get('tags', {}) or {}
+        comments_data = self.project_data.get('comments', {}) or {}
+
+        existing_tag_files = set(tags_dir.glob('tag_*.json'))
+        active_tag_files = set()
+        for tag_number, tag_payload in tags_data.items():
+            tag_path = tags_dir / f'tag_{tag_number}.json'
+            active_tag_files.add(tag_path)
+            self._atomic_json_write(tag_path, {'tag': tag_payload})
+        for stale_file in existing_tag_files - active_tag_files:
+            stale_file.unlink(missing_ok=True)
+
+        existing_comment_files = set(comments_dir.glob('comment_*.json'))
+        active_comment_files = set()
+        for comment_number, comment_payload in comments_data.items():
+            comment_path = comments_dir / f'comment_{comment_number}.json'
+            active_comment_files.add(comment_path)
+            self._atomic_json_write(comment_path, {'comment': comment_payload})
+        for stale_file in existing_comment_files - active_comment_files:
+            stale_file.unlink(missing_ok=True)
+
+    def _load_entities_from_directory(self, directory: Path, prefix: str, key: str) -> Dict[str, Any]:
+        loaded_data: Dict[str, Any] = {}
+        if not directory.exists():
+            return loaded_data
+        for path in sorted(directory.glob(f'{prefix}_*.json')):
+            suffix = path.stem.replace(f'{prefix}_', '', 1)
+            if not suffix:
+                continue
+            payload = self._read_json(path, {})
+            if isinstance(payload, dict) and key in payload:
+                loaded_data[str(suffix)] = payload[key]
+            else:
+                loaded_data[str(suffix)] = payload
+        return loaded_data
 
     def append_action_history(self, command_name: str, before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]):
         if not self.project_root:
@@ -144,6 +183,8 @@ class ProjectService:
             project_name = Path(file_path).stem
             self.project_root = self._workspace_root / f"{self._sanitize_name(project_name)}_{self.project_id[:8]}"
             self.initialize_storage(project_name=project_name)
+            self.project_data['tags'] = self._load_entities_from_directory(self.project_root / 'tags', 'tag', 'tag')
+            self.project_data['comments'] = self._load_entities_from_directory(self.project_root / 'comments', 'comment', 'comment')
             self.is_saved = True
             return True, "Project loaded successfully"
         except FileNotFoundError as e:
@@ -161,6 +202,14 @@ class ProjectService:
             if not self.file_path:
                 return False, "No file path specified"
             os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+
+            tag_service = self.tag_service or getattr(getattr(self, 'main_window', None), 'tag_service', None)
+            comment_service = self.comment_service or getattr(getattr(self, 'main_window', None), 'comment_service', None)
+            if tag_service is not None:
+                self.project_data['tags'] = tag_service.get_all_data()
+            if comment_service is not None:
+                self.project_data['comments'] = comment_service.get_all_data()
+
             self.save_structured_project_state()
             data_to_save = {
                 'project_data': self.project_data,
